@@ -91,13 +91,27 @@ export default function HealthSection() {
   const [usages, setUsages] = useState({});
   const [healthItems, setHealthItems] = useState(DEFAULT_HEALTH_ITEMS);
   const [loading, setLoading] = useState(false);
-  const [currentDate, setCurrentDate] = useState(
-    new Date().toISOString().split("T")[0]
-  );
+  const [currentDate, setCurrentDate] = useState(() => {
+    const today = new Date();
+    const year = today.getFullYear();
+    const month = String(today.getMonth() + 1).padStart(2, "0");
+    const day = String(today.getDate()).padStart(2, "0");
+    return `${year}-${month}-${day}`;
+  });
 
   // Modal state
   const [editItem, setEditItem] = useState(null);
   const [isEditModalOpen, setIsEditModalOpen] = useState(false);
+
+  // Funkcija za formatiranje datuma
+  const formatDateForAPI = (date) => {
+    const d = new Date(date);
+    // Koristi lokalni datum umesto UTC
+    const year = d.getFullYear();
+    const month = String(d.getMonth() + 1).padStart(2, "0");
+    const day = String(d.getDate()).padStart(2, "0");
+    return `${year}-${month}-${day}`; // YYYY-MM-DD format
+  };
 
   // Učitaj health items i podatke za današnji datum
   useEffect(() => {
@@ -117,13 +131,9 @@ export default function HealthSection() {
     if (!user || !token) return;
 
     try {
-      console.log("Učitavam health items...");
       const response = await healthItemsAPI.getHealthItems(token);
-      console.log("Health items response:", response);
 
       if (response && response.length > 0) {
-        console.log("Pronađeni health items u bazi:", response.length);
-
         // Proveri da li nedostaju neki default items
         const existingKeys = response.map((item) => item.key);
         const missingItems = DEFAULT_HEALTH_ITEMS.filter(
@@ -131,10 +141,6 @@ export default function HealthSection() {
         );
 
         if (missingItems.length > 0) {
-          console.log(
-            "Nedostaju default items:",
-            missingItems.map((item) => item.key)
-          );
           // Kreiraj nedostajuće items
           await createMissingHealthItems(missingItems);
           // Ponovo učitaj sve items
@@ -153,14 +159,12 @@ export default function HealthSection() {
         );
         setUsages(initialUsages);
       } else {
-        console.log("Nema health items u bazi, kreiram default...");
         // Ako nema podataka u bazi, kreiraj default health items
         await createDefaultHealthItems();
       }
     } catch (error) {
       console.error("Greška pri učitavanju health items:", error);
       // Koristi default ako ne može da učita sa backend-a
-      console.log("Koristim lokalne default health items");
       setHealthItems(DEFAULT_HEALTH_ITEMS);
       const initialUsages = {};
       DEFAULT_HEALTH_ITEMS.forEach((item) => {
@@ -172,17 +176,12 @@ export default function HealthSection() {
 
   const createMissingHealthItems = async (missingItems) => {
     try {
-      console.log("Kreiram nedostajuće health items...");
       const createdItems = [];
 
       for (const item of missingItems) {
-        console.log("Kreiram item:", item.key);
         const newItem = await healthItemsAPI.createHealthItem(item, token);
-        console.log("Kreiran item:", newItem);
         createdItems.push(newItem);
       }
-
-      console.log("Nedostajući items kreirani:", createdItems);
 
       toast({
         title: "Uspešno",
@@ -205,21 +204,17 @@ export default function HealthSection() {
 
   const createDefaultHealthItems = async () => {
     try {
-      console.log("Kreiram default health items...");
       const createdItems = [];
 
       // Kreiraj sve default health items u bazi
       for (const defaultItem of DEFAULT_HEALTH_ITEMS) {
-        console.log("Kreiram item:", defaultItem.key);
         const newItem = await healthItemsAPI.createHealthItem(
           defaultItem,
           token
         );
-        console.log("Kreiran item:", newItem);
         createdItems.push(newItem);
       }
 
-      console.log("Svi default items kreirani:", createdItems);
       setHealthItems(createdItems);
 
       // Inicijalizuj usages
@@ -239,7 +234,6 @@ export default function HealthSection() {
     } catch (error) {
       console.error("Greška pri kreiranju default health items:", error);
       // Ako ne može da kreira u bazi, koristi default lokalno
-      console.log("Koristim lokalne default health items zbog greške");
       setHealthItems(DEFAULT_HEALTH_ITEMS);
       const initialUsages = {};
       DEFAULT_HEALTH_ITEMS.forEach((item) => {
@@ -254,7 +248,8 @@ export default function HealthSection() {
 
     setLoading(true);
     try {
-      const response = await healthAPI.getHealthLog(currentDate, token);
+      const formattedDate = formatDateForAPI(currentDate);
+      const response = await healthAPI.getHealthLog(formattedDate, token);
 
       // Ako postoje podaci za današnji datum, koristi ih
       if (response && response.length > 0) {
@@ -313,10 +308,11 @@ export default function HealthSection() {
     }));
 
     try {
+      const formattedDate = formatDateForAPI(currentDate);
       // Pošalji podatke na backend
       await healthAPI.updateHealthLog(
         {
-          date: currentDate,
+          date: formattedDate,
           [key]: newValue,
         },
         token
@@ -474,11 +470,6 @@ export default function HealthSection() {
       )}
 
       <SimpleGrid columns={{ base: 2, md: 4 }} spacing={6}>
-        {console.log(
-          "Rendering health items:",
-          healthItems.length,
-          healthItems
-        )}
         {healthItems.map((item) => (
           <VStack key={item.key} spacing={2} position="relative">
             <UsageCircleIcon
