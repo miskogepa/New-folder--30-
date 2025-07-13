@@ -399,3 +399,94 @@ Evo kako možeš da testiraš sve rute svog backend-a koristeći Postman. Prikaz
 Ovim redosledom možeš testirati sve osnovne funkcionalnosti aplikacije i proveriti da li backend radi ispravno!
 
 ---
+
+## Plan za frontend aplikaciju
+
+### Osnovna struktura
+
+- **components/** – Sadrži sve manje, višekratne React komponente (npr. dugmad, grid za ranac, prikaz pojedinačnog predmeta, modal za izbor ikonice, health tracker, itd.)
+- **pages/** – Sadrži stranice aplikacije (npr. Home, Moj EDC, Ranac, Zdravlje, Login, Registracija, Profil korisnika, itd.)
+- **store/** – Sadrži Zustand store-ove za globalno stanje (npr. korisnik, kolekcija predmeta, stanje ranca, health log, itd.)
+
+---
+
+### Ključne funkcionalnosti i koraci
+
+1. **Autentikacija korisnika**
+
+   - Stranice za login i registraciju.
+   - Čuvanje JWT tokena u localStorage ili Zustand store-u.
+   - Slanje tokena u Authorization header-u za zaštićene API pozive.
+
+2. **Prikaz i upravljanje kolekcijom predmeta (Moj EDC)**
+
+   - Stranica sa listom svih predmeta korisnika.
+   - Dugme za dodavanje novog predmeta (otvara modal/formu).
+   - **Izbor ikonice:**
+     - Prikazuje se grid sa ponuđenim ikonicama (npr. lampa, multitool, nož, sat, itd.).
+     - Korisnik klikom bira ikonicu, a frontend backendu šalje string identifikator (npr. "lampa").
+   - Prikaz predmeta koristi vrednost iz polja `icon` da odabere odgovarajuću React ikonu.
+
+3. **Prikaz i upravljanje rancem**
+
+   - Stranica sa grid prikazom ranca (npr. 4x4 ili 5x5).
+   - Sa strane lista predmeta iz kolekcije (drag & drop ili klik za ubacivanje u ranac).
+   - Kada korisnik ubaci predmet koji ima više varijanti (npr. više lampi), otvara se modal za izbor tačne varijante.
+   - Mogućnost praćenja korišćenja predmeta (ako je definisan usageLimit).
+
+4. **Sekcija Zdravlje**
+
+   - Prikaz ikonica za vodu, hranu, trening, suplemente/lekove.
+   - Za svaku ikonicu korisnik može da podesi broj dnevnih upotreba i da klikom popunjava crtice oko ikonice.
+   - Stanje se čuva u store-u i sinhronizuje sa backendom (HealthLog).
+
+5. **Povezivanje sa backendom**
+
+   - Sve podatke (korisnik, predmeti, ranac, health log) dohvatamo i šaljemo preko API poziva na backend.
+   - Za zaštićene rute šaljemo JWT token u headeru.
+   - Store-ovi koriste async akcije za komunikaciju sa backendom.
+
+6. **UI/UX**
+   - Tamna tema, gaming stil, jasno odvojene sekcije.
+   - Responsive dizajn za mobilne i desktop uređaje.
+   - Animacije za dodavanje/uklanjanje predmeta, popunjavanje crtica, otvaranje modala.
+
+---
+
+**Ovakva struktura omogućava jasan, skalabilan i lako održiv frontend, gde je svaki deo aplikacije odvojen i lako se razvija i testira.**
+
+---
+
+## Temiranje aplikacije (Light & Dark tema)
+
+Aplikacija će imati dve vizuelne teme koje korisnik može da bira:
+
+### Light tema (paleta sa sivim tonovima)
+
+- **METALLIC SILVER**: #A5ABAC
+- **DIM GRAY**: #656A69
+- **OUTER SPACE**: #445253
+- **ARSENIC**: #3C4341
+- **DARK CHARCOAL**: #2F3237
+
+Ova tema koristi neutralne, moderne sive tonove za pozadinu, kartice, border-e i tekst. Idealna je za čist, pregledan i "tech" izgled.
+
+### Dark tema (paleta sa zelenim i crvenim tonovima)
+
+- **BOY RED**: #6A6352
+- **DARK VANILLA**: #D5CCAB
+- **GRULLO**: #A3A289
+- **CAMOUFLAGE GREEN**: #878568
+- **OLIVE DRAB CAMOUFLAGE**: #505143
+
+Ova tema koristi tamnije, "military" i prirodne tonove sa akcentom na crvenkastu (boy red) i maslinasto zelenu. Prikladna je za "outdoor", EDC i avanturistički osećaj.
+
+---
+
+**Implementacija:**
+
+- Sve boje će biti definisane kao CSS promenljive (custom properties) ili u theme objektu (ako koristiš Chakra UI ili styled-components).
+- Korisnik može da bira između light i dark teme u podešavanjima ili preko dugmeta.
+- Komponente koriste boje iz aktivne teme za pozadinu, tekst, border-e, ikonice itd.
+
+---
