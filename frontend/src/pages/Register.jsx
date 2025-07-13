@@ -12,6 +12,7 @@ import {
   Text,
 } from "@chakra-ui/react";
 import { useNavigate } from "react-router-dom";
+import { authAPI } from "../services/api";
 
 // Custom paleta iz plan.md
 const lightColors = {
@@ -45,13 +46,7 @@ export default function Register() {
     setError("");
     setLoading(true);
     try {
-      const res = await fetch("/api/users", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ username, email, password }),
-      });
-      const data = await res.json();
-      if (!res.ok) throw new Error(data.error || "Greška pri registraciji");
+      await authAPI.register({ username, email, password });
       navigate("/login");
     } catch (err) {
       setError(err.message);

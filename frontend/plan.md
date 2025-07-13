@@ -490,3 +490,39 @@ Ova tema koristi tamnije, "military" i prirodne tonove sa akcentom na crvenkastu
 - Komponente koriste boje iz aktivne teme za pozadinu, tekst, border-e, ikonice itd.
 
 ---
+
+## UX logika za unos predmeta, usage limit i pakovanje ranca
+
+### 1. Dodavanje predmeta u Moj EDC
+
+- Korisnik unosi naziv, bira tip (npr. lampa, multitool, nož...) i bira ikonicu.
+- Može opcionalno da postavi maksimalan broj upotreba dnevno (usage limit) – korisno za predmete koji se troše (npr. lekovi, voda, hrana, baterijska lampa).
+- Za predmete tipa „ključevi“, „novčanik“, „sat“ – usage limit nije potreban.
+- Polje za usage limit prikazati samo ako korisnik želi (npr. klikom na „Dodaj ograničenje upotrebe“).
+
+### 2. Pakovanje ranca za dan
+
+- Korisnik bira koje tačno predmete iz kolekcije ubacuje u ranac.
+- Ako predmet ima usage limit, prikazuje se koliko puta je dozvoljeno koristiti taj predmet tog dana (preuzima se iz Moj EDC).
+- Korisnik može dodatno prilagoditi usage limit za taj dan (override), npr. ako danas nosi više baterija.
+- Ako usage limit nije ranije postavljen, može ga postaviti prilikom pakovanja ranca.
+
+### 3. Sekcija Zdravlje
+
+- Za stavke Zdravlje (voda, hrana, lekovi, trening) usage limit je uvek potreban.
+- Korisnik bira koliko puta dnevno želi da prati unos za svaku stavku.
+
+### UX preporuka
+
+- Dati korisniku fleksibilnost: usage limit može postaviti kad dodaje predmet u kolekciju, ali i kasnije, kad pakuje ranac za dan (override).
+- Za sekciju Zdravlje, usage limit je uvek potreban.
+
+---
+
+### Redosled implementacije
+
+1. Forma za dodavanje predmeta u Moj EDC (sa opcionalnim usage limit poljem)
+2. Prikaz i unos za sekciju Zdravlje
+3. Prikaz i logika za pakovanje ranca (sa override usage limit-a)
+
+---

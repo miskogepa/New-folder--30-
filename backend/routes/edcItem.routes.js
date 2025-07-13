@@ -11,9 +11,9 @@ import {
 
 const router = express.Router();
 
-router.get("/", asyncHandler(getEdcItems));
+router.get("/", auth, asyncHandler(getEdcItems));
 router.post("/", auth, asyncHandler(createEdcItem));
-router.get("/:id", asyncHandler(getEdcItemById));
+router.get("/:id", auth, asyncHandler(getEdcItemById));
 router.put("/:id", auth, asyncHandler(updateEdcItem));
 router.delete("/:id", auth, asyncHandler(deleteEdcItem));
 
