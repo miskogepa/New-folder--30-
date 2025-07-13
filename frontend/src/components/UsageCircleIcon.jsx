@@ -1,13 +1,11 @@
 import React from "react";
-import { FaGlassWater } from "react-icons/fa6";
-import { GiSwissArmyKnife } from "react-icons/gi";
 
-export default function UsageCircleIcon({ maxUses, used, onUse, size = 80 }) {
+export default function UsageCircleIcon({ maxUses, used, onUse, size = 80, icon, activeColor = "yellow" }) {
   const radius = size / 2 - 10;
   const strokeWidth = 6;
   const center = size / 2;
   const angleStep = 360 / maxUses;
-  const gapAngle = 18; // povećan ugao praznine između crtica
+  const gapAngle = 18;
   const segmentAngle = angleStep - gapAngle;
 
   return (
@@ -18,7 +16,6 @@ export default function UsageCircleIcon({ maxUses, used, onUse, size = 80 }) {
       onClick={onUse}
     >
       {[...Array(maxUses)].map((_, i) => {
-        // Početni i krajnji ugao segmenta sa prazninom (gap)
         const startAngle = angleStep * i - 90 + gapAngle / 2;
         const endAngle = startAngle + segmentAngle;
         const startRad = startAngle * (Math.PI / 180);
@@ -33,7 +30,7 @@ export default function UsageCircleIcon({ maxUses, used, onUse, size = 80 }) {
           <path
             key={i}
             d={`M${x1},${y1} A${radius},${radius} 0 ${largeArc} 1 ${x2},${y2}`}
-            stroke={isActive ? "yellow" : "#888"}
+            stroke={isActive ? activeColor : "#888"}
             strokeWidth={strokeWidth}
             fill="none"
             strokeLinecap="round"
@@ -41,7 +38,7 @@ export default function UsageCircleIcon({ maxUses, used, onUse, size = 80 }) {
           />
         );
       })}
-      <foreignObject x={center - 24} y={center - 24} width={48} height={48}>
+      <foreignObject x={center - 24} y={center - 24} width={48} height={48} pointerEvents="none">
         <div
           style={{
             display: "flex",
@@ -49,10 +46,10 @@ export default function UsageCircleIcon({ maxUses, used, onUse, size = 80 }) {
             justifyContent: "center",
             width: 48,
             height: 48,
+            pointerEvents: "none"
           }}
         >
-          
-          <GiSwissArmyKnife  size={80} color="yellow" />
+          {icon}
         </div>
       </foreignObject>
     </svg>

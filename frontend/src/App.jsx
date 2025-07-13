@@ -22,6 +22,7 @@ import {
 } from "@chakra-ui/react";
 import EdcItemList from "./components/EdcItemList";
 import EdcItemEditModal from "./components/EdcItemEditModal";
+import HealthSection from "./components/HealthSection";
 
 const lightColors = {
   bg: "#A5ABAC",
@@ -128,7 +129,20 @@ function BackpackPage() {
   return <div style={{ padding: 32 }}>Ranac stranica</div>;
 }
 function HealthPage() {
-  return <div style={{ padding: 32 }}>Zdravlje stranica</div>;
+  const { colorMode } = useColorMode();
+  const colors = colorMode === "light" ? lightColors : darkColors;
+  return (
+    <Box
+      minH="100vh"
+      bg={colors.bg}
+      display="flex"
+      alignItems="center"
+      justifyContent="center"
+      py={8}
+    >
+      <HealthSection />
+    </Box>
+  );
 }
 
 function Layout({ children }) {
