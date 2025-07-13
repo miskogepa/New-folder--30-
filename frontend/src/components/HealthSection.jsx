@@ -20,14 +20,14 @@ const HEALTH_ITEMS = [
   {
     key: "water",
     label: "Voda",
-    icon: <FaGlassWater size={40} color="#00BFFF" />,
-    color: "#00BFFF",
+    icon: <FaGlassWater size={40} color="#D5CCAB" />,
+    color: "#A3A289",
     defaultLimit: 8,
   },
   {
     key: "food",
     label: "Hrana",
-    icon: <FaAppleWhole size={40} color="#A3A289" />,
+    icon: <FaAppleWhole size={40} color="#D5CCAB" />,
     color: "#A3A289",
     defaultLimit: 3,
   },
@@ -41,7 +41,7 @@ const HEALTH_ITEMS = [
   {
     key: "supplements",
     label: "Suplementi",
-    icon: <FaPills size={40} color="#6A6352" />,
+    icon: <FaPills size={40} color="#D5CCAB" />,
     color: "#6A6352",
     defaultLimit: 2,
   },
@@ -71,7 +71,7 @@ export default function HealthSection() {
   const [limits, setLimits] = useState({
     water: 8,
     food: 3,
-    training: 1,
+    training: 2,
     supplements: 2,
   });
 
@@ -109,7 +109,7 @@ export default function HealthSection() {
               used={usages[item.key]}
               onUse={() => handleUse(item.key)}
               icon={item.icon}
-              activeColor={item.color}
+              activeColor="rgb(211,92,45)"
               size={90}
             />
             <Text color={colors.text} fontWeight="medium">
