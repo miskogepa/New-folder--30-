@@ -8,45 +8,65 @@ import {
   useColorMode,
   SimpleGrid,
   useToast,
+  IconButton,
 } from "@chakra-ui/react";
 import {
   FaGlassWater,
   FaAppleWhole,
   FaDumbbell,
   FaPills,
+  FaPersonRunning,
+  FaBed,
+  FaHeart,
+  FaBrain,
+  FaPenToSquare,
 } from "react-icons/fa6";
 import UsageCircleIcon from "./UsageCircleIcon";
+import HealthSectionEditModal from "./HealthSectionEditModal";
 import { useUserStore } from "../store/userStore";
-import { healthAPI } from "../services/api";
+import { healthAPI, healthItemsAPI } from "../services/api";
 
-const HEALTH_ITEMS = [
+// Mapiranje ikona po ključevima
+const ICON_MAP = {
+  water: <FaGlassWater size={40} color="#D5CCAB" />,
+  food: <FaAppleWhole size={40} color="#D5CCAB" />,
+  training: <FaDumbbell size={40} color="#D5CCAB" />,
+  supplements: <FaPills size={40} color="#D5CCAB" />,
+  running: <FaPersonRunning size={40} color="#D5CCAB" />,
+  sleep: <FaBed size={40} color="#D5CCAB" />,
+  heart: <FaHeart size={40} color="#D5CCAB" />,
+  brain: <FaBrain size={40} color="#D5CCAB" />,
+};
+
+// Default health items (ako nema podataka u bazi)
+const DEFAULT_HEALTH_ITEMS = [
   {
     key: "water",
     label: "Voda",
-    icon: <FaGlassWater size={40} color="#D5CCAB" />,
+    iconKey: "water",
     color: "#A3A289",
-    defaultLimit: 8,
+    limit: 8,
   },
   {
     key: "food",
     label: "Hrana",
-    icon: <FaAppleWhole size={40} color="#D5CCAB" />,
+    iconKey: "food",
     color: "#A3A289",
-    defaultLimit: 3,
+    limit: 3,
   },
   {
     key: "training",
     label: "Trening",
-    icon: <FaDumbbell size={40} color="#D5CCAB" />,
+    iconKey: "training",
     color: "#D5CCAB",
-    defaultLimit: 1,
+    limit: 1,
   },
   {
     key: "supplements",
     label: "Suplementi",
-    icon: <FaPills size={40} color="#D5CCAB" />,
+    iconKey: "supplements",
     color: "#6A6352",
-    defaultLimit: 2,
+    limit: 2,
   },
 ];
 
@@ -68,29 +88,166 @@ export default function HealthSection() {
   const toast = useToast();
 
   // State za health podatke
-  const [usages, setUsages] = useState({
-    water: 0,
-    food: 0,
-    training: 0,
-    supplements: 0,
-  });
-  const [limits, setLimits] = useState({
-    water: 8,
-    food: 3,
-    training: 2,
-    supplements: 2,
-  });
+  const [usages, setUsages] = useState({});
+  const [healthItems, setHealthItems] = useState(DEFAULT_HEALTH_ITEMS);
   const [loading, setLoading] = useState(false);
   const [currentDate, setCurrentDate] = useState(
     new Date().toISOString().split("T")[0]
   );
 
-  // Učitaj health podatke za današnji datum
+  // Modal state
+  const [editItem, setEditItem] = useState(null);
+  const [isEditModalOpen, setIsEditModalOpen] = useState(false);
+
+  // Učitaj health items i podatke za današnji datum
   useEffect(() => {
     if (user && token) {
+      loadHealthItems();
+    }
+  }, [user, token]);
+
+  // Učitaj health podatke kada se healthItems promene
+  useEffect(() => {
+    if (user && token && healthItems.length > 0) {
       loadHealthData();
     }
-  }, [user, token, currentDate]);
+  }, [user, token, healthItems, currentDate]);
+
+  const loadHealthItems = async () => {
+    if (!user || !token) return;
+
+    try {
+      console.log("Učitavam health items...");
+      const response = await healthItemsAPI.getHealthItems(token);
+      console.log("Health items response:", response);
+
+      if (response && response.length > 0) {
+        console.log("Pronađeni health items u bazi:", response.length);
+
+        // Proveri da li nedostaju neki default items
+        const existingKeys = response.map((item) => item.key);
+        const missingItems = DEFAULT_HEALTH_ITEMS.filter(
+          (item) => !existingKeys.includes(item.key)
+        );
+
+        if (missingItems.length > 0) {
+          console.log(
+            "Nedostaju default items:",
+            missingItems.map((item) => item.key)
+          );
+          // Kreiraj nedostajuće items
+          await createMissingHealthItems(missingItems);
+          // Ponovo učitaj sve items
+          const updatedResponse = await healthItemsAPI.getHealthItems(token);
+          setHealthItems(updatedResponse);
+        } else {
+          setHealthItems(response);
+        }
+
+        // Inicijalizuj usages za sve item-e
+        const initialUsages = {};
+        (response.length > 0 ? response : DEFAULT_HEALTH_ITEMS).forEach(
+          (item) => {
+            initialUsages[item.key] = 0;
+          }
+        );
+        setUsages(initialUsages);
+      } else {
+        console.log("Nema health items u bazi, kreiram default...");
+        // Ako nema podataka u bazi, kreiraj default health items
+        await createDefaultHealthItems();
+      }
+    } catch (error) {
+      console.error("Greška pri učitavanju health items:", error);
+      // Koristi default ako ne može da učita sa backend-a
+      console.log("Koristim lokalne default health items");
+      setHealthItems(DEFAULT_HEALTH_ITEMS);
+      const initialUsages = {};
+      DEFAULT_HEALTH_ITEMS.forEach((item) => {
+        initialUsages[item.key] = 0;
+      });
+      setUsages(initialUsages);
+    }
+  };
+
+  const createMissingHealthItems = async (missingItems) => {
+    try {
+      console.log("Kreiram nedostajuće health items...");
+      const createdItems = [];
+
+      for (const item of missingItems) {
+        console.log("Kreiram item:", item.key);
+        const newItem = await healthItemsAPI.createHealthItem(item, token);
+        console.log("Kreiran item:", newItem);
+        createdItems.push(newItem);
+      }
+
+      console.log("Nedostajući items kreirani:", createdItems);
+
+      toast({
+        title: "Uspešno",
+        description: `Kreirano ${createdItems.length} nedostajućih health items`,
+        status: "success",
+        duration: 2000,
+        isClosable: true,
+      });
+    } catch (error) {
+      console.error("Greška pri kreiranju nedostajućih health items:", error);
+      toast({
+        title: "Greška",
+        description: "Nije moguće kreirati nedostajuće health items",
+        status: "error",
+        duration: 3000,
+        isClosable: true,
+      });
+    }
+  };
+
+  const createDefaultHealthItems = async () => {
+    try {
+      console.log("Kreiram default health items...");
+      const createdItems = [];
+
+      // Kreiraj sve default health items u bazi
+      for (const defaultItem of DEFAULT_HEALTH_ITEMS) {
+        console.log("Kreiram item:", defaultItem.key);
+        const newItem = await healthItemsAPI.createHealthItem(
+          defaultItem,
+          token
+        );
+        console.log("Kreiran item:", newItem);
+        createdItems.push(newItem);
+      }
+
+      console.log("Svi default items kreirani:", createdItems);
+      setHealthItems(createdItems);
+
+      // Inicijalizuj usages
+      const initialUsages = {};
+      createdItems.forEach((item) => {
+        initialUsages[item.key] = 0;
+      });
+      setUsages(initialUsages);
+
+      toast({
+        title: "Uspešno",
+        description: "Default health items su kreirani",
+        status: "success",
+        duration: 2000,
+        isClosable: true,
+      });
+    } catch (error) {
+      console.error("Greška pri kreiranju default health items:", error);
+      // Ako ne može da kreira u bazi, koristi default lokalno
+      console.log("Koristim lokalne default health items zbog greške");
+      setHealthItems(DEFAULT_HEALTH_ITEMS);
+      const initialUsages = {};
+      DEFAULT_HEALTH_ITEMS.forEach((item) => {
+        initialUsages[item.key] = 0;
+      });
+      setUsages(initialUsages);
+    }
+  };
 
   const loadHealthData = async () => {
     if (!user || !token) return;
@@ -102,19 +259,19 @@ export default function HealthSection() {
       // Ako postoje podaci za današnji datum, koristi ih
       if (response && response.length > 0) {
         const todayData = response[0]; // Uzmi prvi log za današnji datum
-        setUsages({
-          water: todayData.water || 0,
-          food: todayData.food || 0,
-          training: todayData.training || 0,
-          supplements: todayData.supplements || 0,
-        });
-      } else {
-        // Ako nema podataka, resetuj na 0
-        setUsages({
-          water: 0,
-          food: 0,
-          training: 0,
-          supplements: 0,
+
+        // Dinamički ažuriraj usages za sve health item-e
+        setUsages((prev) => {
+          const updatedUsages = { ...prev };
+
+          // Ažuriraj samo one ključeve koji postoje u health items
+          healthItems.forEach((item) => {
+            if (todayData[item.key] !== undefined) {
+              updatedUsages[item.key] = todayData[item.key] || 0;
+            }
+          });
+
+          return updatedUsages;
         });
       }
     } catch (error) {
@@ -144,7 +301,10 @@ export default function HealthSection() {
       return;
     }
 
-    const newValue = Math.min(usages[key] + 1, limits[key]);
+    const item = healthItems.find((item) => item.key === key);
+    if (!item) return;
+
+    const newValue = Math.min((usages[key] || 0) + 1, item.limit);
 
     // Optimistički update UI-a
     setUsages((prev) => ({
@@ -164,9 +324,7 @@ export default function HealthSection() {
 
       toast({
         title: "Uspešno",
-        description: `${
-          HEALTH_ITEMS.find((item) => item.key === key)?.label
-        } ažuriran`,
+        description: `${item.label} ažuriran`,
         status: "success",
         duration: 2000,
         isClosable: true,
@@ -177,12 +335,64 @@ export default function HealthSection() {
       // Vrati na prethodnu vrednost ako je došlo do greške
       setUsages((prev) => ({
         ...prev,
-        [key]: usages[key],
+        [key]: usages[key] || 0,
       }));
 
       toast({
         title: "Greška",
         description: "Nije moguće ažurirati podatke",
+        status: "error",
+        duration: 3000,
+        isClosable: true,
+      });
+    }
+  };
+
+  const handleEditItem = (item) => {
+    setEditItem(item);
+    setIsEditModalOpen(true);
+  };
+
+  const handleEditModalClose = () => {
+    setEditItem(null);
+    setIsEditModalOpen(false);
+  };
+
+  const handleItemUpdated = async (updatedItem) => {
+    try {
+      if (updatedItem._id) {
+        // Ažuriraj postojeći item
+        await healthItemsAPI.updateHealthItem(
+          updatedItem._id,
+          updatedItem,
+          token
+        );
+      } else {
+        // Kreiraj novi item
+        const newItem = await healthItemsAPI.createHealthItem(
+          updatedItem,
+          token
+        );
+        updatedItem = newItem;
+      }
+
+      // Ažuriraj lokalni state
+      setHealthItems((prev) =>
+        prev.map((item) => (item.key === updatedItem.key ? updatedItem : item))
+      );
+
+      toast({
+        title: "Uspešno",
+        description: `${updatedItem.label} je ažuriran`,
+        status: "success",
+        duration: 2000,
+        isClosable: true,
+      });
+    } catch (error) {
+      console.error("Greška pri ažuriranju health item-a:", error);
+      toast({
+        title: "Greška",
+        description: "Nije moguće ažurirati health item",
         status: "error",
         duration: 3000,
         isClosable: true,
@@ -246,14 +456,36 @@ export default function HealthSection() {
           day: "numeric",
         })}
       </Text>
+
+      {/* Dugme za kreiranje default items ako nedostaju */}
+      {healthItems.length < 4 && (
+        <Box mb={4} textAlign="center">
+          <Button
+            size="sm"
+            onClick={createDefaultHealthItems}
+            colorScheme="teal"
+            bg={colors.accent}
+            color={colors.text}
+            _hover={{ bg: colors.text, color: colors.card }}
+          >
+            Kreiraj default health items
+          </Button>
+        </Box>
+      )}
+
       <SimpleGrid columns={{ base: 2, md: 4 }} spacing={6}>
-        {HEALTH_ITEMS.map((item) => (
-          <VStack key={item.key} spacing={2}>
+        {console.log(
+          "Rendering health items:",
+          healthItems.length,
+          healthItems
+        )}
+        {healthItems.map((item) => (
+          <VStack key={item.key} spacing={2} position="relative">
             <UsageCircleIcon
-              maxUses={limits[item.key]}
-              used={usages[item.key]}
+              maxUses={item.limit}
+              used={usages[item.key] || 0}
               onUse={() => handleUse(item.key)}
-              icon={item.icon}
+              icon={ICON_MAP[item.iconKey] || ICON_MAP.water}
               activeColor="rgb(211,92,45)"
               size={90}
               disabled={loading}
@@ -262,12 +494,30 @@ export default function HealthSection() {
               {item.label}
             </Text>
             <Text color={colors.accent} fontSize="sm">
-              {usages[item.key]} / {limits[item.key]}
+              {usages[item.key] || 0} / {item.limit}
             </Text>
-            {/* Kasnije: dugme/modal za podešavanje limita */}
+            <IconButton
+              size="sm"
+              icon={<FaPenToSquare />}
+              onClick={() => handleEditItem(item)}
+              variant="ghost"
+              color={colors.accent}
+              _hover={{ bg: colors.input }}
+              position="absolute"
+              top={0}
+              right={0}
+              aria-label="Izmeni"
+            />
           </VStack>
         ))}
       </SimpleGrid>
+
+      <HealthSectionEditModal
+        isOpen={isEditModalOpen}
+        onClose={handleEditModalClose}
+        item={editItem}
+        onUpdated={handleItemUpdated}
+      />
     </Box>
   );
 }

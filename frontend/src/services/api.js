@@ -157,3 +157,48 @@ export const healthAPI = {
     });
   },
 };
+
+// Health Items (konfiguracija)
+export const healthItemsAPI = {
+  // Dohvati sve health item-e korisnika
+  getHealthItems: async (token) => {
+    return apiCall("/health-items", {
+      headers: getAuthHeaders(token),
+    });
+  },
+
+  // Kreiraj novi health item
+  createHealthItem: async (itemData, token) => {
+    return apiCall("/health-items", {
+      method: "POST",
+      headers: getAuthHeaders(token),
+      body: JSON.stringify(itemData),
+    });
+  },
+
+  // Ažuriraj health item
+  updateHealthItem: async (itemId, itemData, token) => {
+    return apiCall(`/health-items/${itemId}`, {
+      method: "PUT",
+      headers: getAuthHeaders(token),
+      body: JSON.stringify(itemData),
+    });
+  },
+
+  // Obriši health item
+  deleteHealthItem: async (itemId, token) => {
+    return apiCall(`/health-items/${itemId}`, {
+      method: "DELETE",
+      headers: getAuthHeaders(token),
+    });
+  },
+
+  // Ažuriraj redosled health item-a
+  updateHealthItemOrder: async (items, token) => {
+    return apiCall("/health-items/order/update", {
+      method: "PUT",
+      headers: getAuthHeaders(token),
+      body: JSON.stringify({ items }),
+    });
+  },
+};
