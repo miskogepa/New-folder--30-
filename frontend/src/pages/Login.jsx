@@ -12,6 +12,7 @@ import {
   Text,
 } from "@chakra-ui/react";
 import { useNavigate } from "react-router-dom";
+import { useUserStore } from "../store/userStore";
 
 export default function Login() {
   const { colorMode, toggleColorMode } = useColorMode();
@@ -20,6 +21,7 @@ export default function Login() {
   const [error, setError] = useState("");
   const [loading, setLoading] = useState(false);
   const navigate = useNavigate();
+  const setUser = useUserStore((state) => state.setUser);
 
   const handleSubmit = async (e) => {
     e.preventDefault();
@@ -33,9 +35,8 @@ export default function Login() {
       });
       const data = await res.json();
       if (!res.ok) throw new Error(data.error || "Greška pri prijavi");
-      localStorage.setItem("token", data.token);
-      // TODO: Sačuvaj user info u globalni store ako koristiš Zustand
-      navigate("/"); // ili na neku početnu stranicu
+      setUser(data.user, data.token);
+      navigate("/edc");
     } catch (err) {
       setError(err.message);
     } finally {
@@ -67,6 +68,7 @@ export default function Login() {
               type="email"
               value={email}
               onChange={(e) => setEmail(e.target.value)}
+              autoComplete="email"
             />
           </FormControl>
           <FormControl mb={4} isRequired>
@@ -75,6 +77,7 @@ export default function Login() {
               type="password"
               value={password}
               onChange={(e) => setPassword(e.target.value)}
+              autoComplete="current-password"
             />
           </FormControl>
           {error && (

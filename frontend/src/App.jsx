@@ -21,15 +21,12 @@ function HealthPage() {
   return <div style={{ padding: 32 }}>Zdravlje stranica</div>;
 }
 
-// Dummy user (dok ne povežemo sa Zustandom)
-const dummyUser = { username: "demo" };
-
 function Layout({ children }) {
   const location = useLocation();
   const hideNavbar = ["/login", "/register"].includes(location.pathname);
   return (
     <>
-      {!hideNavbar && <Navbar user={dummyUser} />}
+      {!hideNavbar && <Navbar />}
       {children}
     </>
   );

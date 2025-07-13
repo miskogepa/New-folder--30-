@@ -21,15 +21,17 @@ import {
 } from "@chakra-ui/react";
 import { Link as RouterLink, useNavigate } from "react-router-dom";
 import { HamburgerIcon } from "@chakra-ui/icons";
+import { useUserStore } from "../store/userStore";
 
-export default function Navbar({ user }) {
+export default function Navbar() {
   const { colorMode, toggleColorMode } = useColorMode();
   const navigate = useNavigate();
+  const user = useUserStore((state) => state.user);
+  const logout = useUserStore((state) => state.logout);
   const { isOpen, onOpen, onClose } = useDisclosure();
 
   const handleLogout = () => {
-    localStorage.removeItem("token");
-    // TODO: Očisti user iz globalnog store-a ako koristiš Zustand
+    logout();
     navigate("/login");
   };
 
