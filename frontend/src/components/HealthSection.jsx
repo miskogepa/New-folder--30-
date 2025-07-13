@@ -145,10 +145,10 @@ export default function HealthSection() {
         });
         setCustomUsages(data.customUsage || {});
         setLimits({
-          water: data.waterLimit || 8,
-          food: data.foodLimit || 3,
-          training: data.trainingLimit || 2,
-          supplements: data.supplementsLimit || 2,
+          water: data.waterLimit,
+          food: data.foodLimit,
+          training: data.trainingLimit,
+          supplements: data.supplementsLimit,
         });
       })
       .catch((err) => {
@@ -394,14 +394,53 @@ export default function HealthSection() {
       >
         Zdravlje
       </Text>
-      <Button
-        colorScheme="teal"
-        mb={4}
-        onClick={() => setAddModalOpen(true)}
-        isLoading={customLoading}
-      >
-        Dodaj novu stavku
-      </Button>
+      <HStack spacing={4} mb={4} justify="center">
+        <Button
+          colorScheme="teal"
+          onClick={() => setAddModalOpen(true)}
+          isLoading={customLoading}
+        >
+          Dodaj novu stavku
+        </Button>
+        {HEALTH_ITEMS.every((item) => limits[item.key] === undefined) && (
+          <Button
+            colorScheme="blue"
+            variant="outline"
+            onClick={() => {
+              const defaultLimits = {
+                water: 8,
+                food: 3,
+                training: 2,
+                supplements: 2,
+              };
+              setLimits(defaultLimits);
+              setUsages({
+                water: 0,
+                food: 0,
+                training: 0,
+                supplements: 0,
+              });
+              saveHealth(
+                {
+                  water: 0,
+                  food: 0,
+                  training: 0,
+                  supplements: 0,
+                },
+                defaultLimits,
+                customUsages
+              );
+              toast({
+                title: "Default stavke vraćene!",
+                status: "success",
+                duration: 1500,
+              });
+            }}
+          >
+            Vrati default stavke
+          </Button>
+        )}
+      </HStack>
       <SimpleGrid columns={{ base: 2, md: 4 }} spacing={6}>
         {allItems.map((item) => (
           <VStack key={item.key} spacing={2}>
