@@ -14,6 +14,22 @@ import {
 import { useNavigate } from "react-router-dom";
 import { useUserStore } from "../store/userStore";
 
+// Custom paleta iz plan.md
+const lightColors = {
+  bg: "#A5ABAC", // METALLIC SILVER
+  card: "#656A69", // DIM GRAY
+  input: "#445253", // OUTER SPACE
+  text: "#2F3237", // DARK CHARCOAL
+  accent: "#3C4341", // ARSENIC
+};
+const darkColors = {
+  bg: "#505143", // OLIVE DRAB CAMOUFLAGE
+  card: "#6A6352", // BOY RED
+  input: "#878568", // CAMOUFLAGE GREEN
+  text: "#D5CCAB", // DARK VANILLA
+  accent: "#A3A289", // GRULLO
+};
+
 export default function Login() {
   const { colorMode, toggleColorMode } = useColorMode();
   const [email, setEmail] = useState("");
@@ -22,6 +38,8 @@ export default function Login() {
   const [loading, setLoading] = useState(false);
   const navigate = useNavigate();
   const setUser = useUserStore((state) => state.setUser);
+
+  const colors = colorMode === "light" ? lightColors : darkColors;
 
   const handleSubmit = async (e) => {
     e.preventDefault();
@@ -47,7 +65,7 @@ export default function Login() {
   return (
     <Box
       minH="100vh"
-      bg={useColorModeValue("gray.100", "gray.900")}
+      bg={colors.bg}
       display="flex"
       alignItems="center"
       justifyContent="center"
@@ -55,29 +73,39 @@ export default function Login() {
       <VStack
         spacing={6}
         p={8}
-        bg={useColorModeValue("white", "gray.800")}
+        bg={colors.card}
         borderRadius="lg"
         boxShadow="lg"
         minW="350px"
       >
-        <Heading size="lg">Prijava</Heading>
+        <Heading size="lg" color={colors.text}>
+          Prijava
+        </Heading>
         <form style={{ width: "100%" }} onSubmit={handleSubmit}>
           <FormControl mb={4} isRequired>
-            <FormLabel>Email</FormLabel>
+            <FormLabel color={colors.text}>Email</FormLabel>
             <Input
               type="email"
               value={email}
               onChange={(e) => setEmail(e.target.value)}
               autoComplete="email"
+              bg={colors.input}
+              color={colors.text}
+              borderColor={colors.accent}
+              _placeholder={{ color: colors.accent }}
             />
           </FormControl>
           <FormControl mb={4} isRequired>
-            <FormLabel>Lozinka</FormLabel>
+            <FormLabel color={colors.text}>Lozinka</FormLabel>
             <Input
               type="password"
               value={password}
               onChange={(e) => setPassword(e.target.value)}
               autoComplete="current-password"
+              bg={colors.input}
+              color={colors.text}
+              borderColor={colors.accent}
+              _placeholder={{ color: colors.accent }}
             />
           </FormControl>
           {error && (
@@ -90,16 +118,26 @@ export default function Login() {
             type="submit"
             width="100%"
             isLoading={loading}
+            bg={colors.accent}
+            color={colors.text}
+            _hover={{ bg: colors.text, color: colors.card }}
           >
             Prijavi se
           </Button>
         </form>
-        <Button onClick={toggleColorMode} variant="outline" width="100%">
+        <Button
+          onClick={toggleColorMode}
+          variant="outline"
+          width="100%"
+          color={colors.text}
+          borderColor={colors.accent}
+          _hover={{ bg: colors.accent, color: colors.card }}
+        >
           Promeni temu ({colorMode === "light" ? "Dark" : "Light"})
         </Button>
-        <Text fontSize="sm">
+        <Text fontSize="sm" color={colors.text}>
           Nemaš nalog?{" "}
-          <a href="/register" style={{ color: "#319795" }}>
+          <a href="/register" style={{ color: colors.accent }}>
             Registruj se
           </a>
         </Text>
