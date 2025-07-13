@@ -344,6 +344,65 @@ export default function HealthSection() {
     }
   };
 
+  const handleReset = async (key) => {
+    if (!user || !token) {
+      toast({
+        title: "Greška",
+        description:
+          "Morate biti prijavljeni da biste koristili ove funkcionalnosti",
+        status: "error",
+        duration: 3000,
+        isClosable: true,
+      });
+      return;
+    }
+
+    const item = healthItems.find((item) => item.key === key);
+    if (!item) return;
+
+    // Optimistički update UI-a
+    setUsages((prev) => ({
+      ...prev,
+      [key]: 0,
+    }));
+
+    try {
+      const formattedDate = formatDateForAPI(currentDate);
+      // Pošalji podatke na backend
+      await healthAPI.updateHealthLog(
+        {
+          date: formattedDate,
+          [key]: 0,
+        },
+        token
+      );
+
+      toast({
+        title: "Uspešno",
+        description: `${item.label} resetovan`,
+        status: "success",
+        duration: 2000,
+        isClosable: true,
+      });
+    } catch (error) {
+      console.error("Greška pri resetovanju:", error);
+
+      // Vrati na prethodnu vrednost ako je došlo do greške
+      setUsages((prev) => ({
+        ...prev,
+        [key]: usages[key] || 0,
+      }));
+
+      toast({
+        title: "Greška",
+        description: "Nije moguće resetovati podatke",
+        status: "error",
+        duration: 3000,
+        isClosable: true,
+      });
+    }
+  };
+
   const handleEditItem = (item) => {
     setEditItem(item);
     setIsEditModalOpen(true);
@@ -476,6 +535,7 @@ export default function HealthSection() {
               maxUses={item.limit}
               used={usages[item.key] || 0}
               onUse={() => handleUse(item.key)}
+              onReset={() => handleReset(item.key)}
               icon={ICON_MAP[item.iconKey] || ICON_MAP.water}
               activeColor="rgb(211,92,45)"
               size={90}
