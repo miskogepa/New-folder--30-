@@ -35,14 +35,14 @@ import {
 import { useUserStore } from "../store/userStore";
 
 const ICON_OPTIONS = [
-  { key: "water", icon: <FaGlassWater size={24} />, label: "Voda" },
-  { key: "food", icon: <FaAppleWhole size={24} />, label: "Hrana" },
-  { key: "training", icon: <FaDumbbell size={24} />, label: "Trening" },
-  { key: "supplements", icon: <FaPills size={24} />, label: "Suplementi" },
-  { key: "running", icon: <FaPersonRunning size={24} />, label: "Trčanje" },
-  { key: "sleep", icon: <FaBed size={24} />, label: "Spavanje" },
-  { key: "heart", icon: <FaHeart size={24} />, label: "Srce" },
-  { key: "brain", icon: <FaBrain size={24} />, label: "Mozak" },
+  { key: "water", icon: <FaGlassWater size={24} />, label: "" },
+  { key: "food", icon: <FaAppleWhole size={24} />, label: "" },
+  { key: "training", icon: <FaDumbbell size={24} />, label: "" },
+  { key: "supplements", icon: <FaPills size={24} />, label: "" },
+  { key: "running", icon: <FaPersonRunning size={24} />, label: "" },
+  { key: "sleep", icon: <FaBed size={24} />, label: "" },
+  { key: "heart", icon: <FaHeart size={24} />, label: "" },
+  { key: "brain", icon: <FaBrain size={24} />, label: "" },
 ];
 
 const lightColors = {
