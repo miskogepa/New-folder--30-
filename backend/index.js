@@ -8,6 +8,7 @@ import edcItemRoutes from "./routes/edcItem.routes.js";
 import backpackRoutes from "./routes/backpack.routes.js";
 import itemUsageRoutes from "./routes/itemUsage.routes.js";
 import healthLogRoutes from "./routes/healthLog.routes.js";
+import healthCustomItemRoutes from "./routes/healthCustomItem.routes.js";
 
 dotenv.config();
 
@@ -21,6 +22,7 @@ app.use("/api/users", userRoutes);
 app.use("/api/items", edcItemRoutes);
 app.use("/api/backpacks", backpackRoutes);
 app.use("/api/item-usage", itemUsageRoutes);
+app.use("/api/health/custom", healthCustomItemRoutes);
 app.use("/api/health", healthLogRoutes);
 
 // Error handler middleware

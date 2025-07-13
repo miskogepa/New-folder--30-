@@ -12,6 +12,7 @@ const healthLogSchema = new mongoose.Schema(
     food: { type: Number, default: 0 },
     training: { type: Number, default: 0 },
     supplements: { type: Number, default: 0 },
+    customUsage: { type: Map, of: Number, default: {} }, // Usage za custom items
   },
   { timestamps: true }
 );

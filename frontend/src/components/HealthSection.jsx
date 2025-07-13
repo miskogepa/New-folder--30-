@@ -33,6 +33,7 @@ import { FaEdit } from "react-icons/fa";
 import UsageCircleIcon from "./UsageCircleIcon";
 import { useUserStore } from "../store/userStore";
 import { healthAPI } from "../services/api";
+import { healthCustomAPI } from "../services/api";
 
 const ICON_OPTIONS = [
   { id: "glass", icon: <FaGlassWater size={32} /> },
@@ -104,6 +105,7 @@ export default function HealthSection() {
     training: 0,
     supplements: 0,
   });
+  const [customUsages, setCustomUsages] = useState({});
   const [limits, setLimits] = useState({
     water: 8,
     food: 3,
@@ -120,6 +122,12 @@ export default function HealthSection() {
   const [customIcons, setCustomIcons] = useState({});
   const [editLabel, setEditLabel] = useState("");
   const [editIcon, setEditIcon] = useState(ICON_OPTIONS[0].id);
+  const [customItems, setCustomItems] = useState([]);
+  const [addModalOpen, setAddModalOpen] = useState(false);
+  const [newLabel, setNewLabel] = useState("");
+  const [newIcon, setNewIcon] = useState(ICON_OPTIONS[0].id);
+  const [newLimit, setNewLimit] = useState(1);
+  const [customLoading, setCustomLoading] = useState(false);
 
   // Fetch health log on mount
   useEffect(() => {
@@ -135,6 +143,7 @@ export default function HealthSection() {
           training: data.training || 0,
           supplements: data.supplements || 0,
         });
+        setCustomUsages(data.customUsage || {});
         setLimits({
           water: data.waterLimit || 8,
           food: data.foodLimit || 3,
@@ -148,8 +157,19 @@ export default function HealthSection() {
       .finally(() => setLoading(false));
   }, [user, token, date]);
 
+  // Fetch custom items on mount
+  useEffect(() => {
+    if (!user || !token) return;
+    setCustomLoading(true);
+    healthCustomAPI
+      .getCustomItems(token)
+      .then(setCustomItems)
+      .catch(() => setCustomItems([]))
+      .finally(() => setCustomLoading(false));
+  }, [user, token]);
+
   // Save to backend
-  const saveHealth = (newUsages, newLimits) => {
+  const saveHealth = (newUsages, newLimits, newCustomUsages = {}) => {
     if (!user || !token) return;
     setSaving(true);
     healthAPI
@@ -165,6 +185,7 @@ export default function HealthSection() {
           foodLimit: newLimits.food,
           trainingLimit: newLimits.training,
           supplementsLimit: newLimits.supplements,
+          customUsage: newCustomUsages,
         },
         token
       )
@@ -194,41 +215,118 @@ export default function HealthSection() {
       [key]: Math.min(usages[key] + 1, limits[key]),
     };
     setUsages(newUsages);
-    saveHealth(newUsages, limits);
+    saveHealth(newUsages, limits, customUsages);
+  };
+
+  // Dodavanje nove custom stavke
+  const handleAddCustom = async () => {
+    if (!newLabel.trim()) return;
+    setCustomLoading(true);
+    try {
+      const item = await healthCustomAPI.addCustomItem(
+        { label: newLabel, iconId: newIcon, limit: newLimit },
+        token
+      );
+      setCustomItems((prev) => [...prev, item]);
+      setAddModalOpen(false);
+      setNewLabel("");
+      setNewIcon(ICON_OPTIONS[0].id);
+      setNewLimit(1);
+      toast({ title: "Stavka dodata!", status: "success", duration: 1500 });
+    } catch (err) {
+      toast({
+        title: "Greška pri dodavanju",
+        description: err.message,
+        status: "error",
+      });
+    } finally {
+      setCustomLoading(false);
+    }
   };
 
   // Modal save
-  const handleEditSave = () => {
+  const handleEditSave = async () => {
     if (!editKey) return;
-    const newLimits = {
-      ...limits,
-      [editKey]: Math.max(1, parseInt(editValue) || 1),
-    };
-    setLimits(newLimits);
-    // Reset usage if novi limit je manji
-    const newUsages = {
-      ...usages,
-      [editKey]: Math.min(usages[editKey], newLimits[editKey]),
-    };
-    setUsages(newUsages);
-    saveHealth(newUsages, newLimits);
-    setCustomLabels({ ...customLabels, [editKey]: editLabel });
-    setCustomIcons({ ...customIcons, [editKey]: editIcon });
+
+    // Ako je custom item, ažuriraj ga u backend-u
+    if (customItems.find((item) => item._id === editKey)) {
+      try {
+        await healthCustomAPI.updateCustomItem(
+          editKey,
+          {
+            label: editLabel,
+            iconId: editIcon,
+            limit: parseInt(editValue) || 1,
+          },
+          token
+        );
+        // Ažuriraj lokalno stanje
+        setCustomItems((prev) =>
+          prev.map((item) =>
+            item._id === editKey
+              ? {
+                  ...item,
+                  label: editLabel,
+                  iconId: editIcon,
+                  limit: parseInt(editValue) || 1,
+                }
+              : item
+          )
+        );
+        toast({
+          title: "Stavka ažurirana!",
+          status: "success",
+          duration: 1500,
+        });
+      } catch (err) {
+        toast({
+          title: "Greška pri ažuriranju",
+          description: err.message,
+          status: "error",
+        });
+        return;
+      }
+    } else {
+      // Za default items
+      const newLimits = {
+        ...limits,
+        [editKey]: Math.max(1, parseInt(editValue) || 1),
+      };
+      setLimits(newLimits);
+      // Reset usage if novi limit je manji
+      const newUsages = {
+        ...usages,
+        [editKey]: Math.min(usages[editKey], newLimits[editKey]),
+      };
+      setUsages(newUsages);
+      saveHealth(newUsages, newLimits, customUsages);
+      setCustomLabels({ ...customLabels, [editKey]: editLabel });
+      setCustomIcons({ ...customIcons, [editKey]: editIcon });
+    }
     setEditKey(null);
   };
 
   // Kada se otvori modal, popuni vrednost
   useEffect(() => {
     if (editKey) {
-      setEditValue(limits[editKey] || 1);
-      setEditLabel(
-        customLabels[editKey] ||
-          HEALTH_ITEMS.find((i) => i.key === editKey)?.label ||
-          ""
-      );
-      setEditIcon(customIcons[editKey] || ICON_OPTIONS[0].id);
+      // Proveri da li je custom item
+      const customItem = customItems.find((item) => item._id === editKey);
+      if (customItem) {
+        setEditValue(customItem.limit);
+        setEditLabel(customItem.label);
+        setEditIcon(customItem.iconId);
+      } else {
+        // Default item
+        setEditValue(limits[editKey] || 1);
+        setEditLabel(
+          customLabels[editKey] ||
+            HEALTH_ITEMS.find((i) => i.key === editKey)?.label ||
+            ""
+        );
+        setEditIcon(customIcons[editKey] || ICON_OPTIONS[0].id);
+      }
     }
-  }, [editKey]);
+  }, [editKey, customItems]);
 
   // Modal za edit limit biće dodat kasnije
 
@@ -246,6 +344,36 @@ export default function HealthSection() {
       </Box>
     );
   }
+
+  // Prikaz svih stavki (default + custom)
+  const allItems = [
+    ...HEALTH_ITEMS.map((item) => {
+      const label = customLabels[item.key] || item.label;
+      const iconId = customIcons[item.key];
+      const iconObj = ICON_OPTIONS.find((ic) => ic.id === iconId);
+      const icon = iconObj ? iconObj.icon : item.icon;
+      return {
+        ...item,
+        label,
+        icon,
+        isCustom: false,
+        key: item.key,
+        limit: limits[item.key],
+        usage: usages[item.key],
+      };
+    }),
+    ...customItems.map((item) => {
+      const iconObj = ICON_OPTIONS.find((ic) => ic.id === item.iconId);
+      return {
+        ...item,
+        icon: iconObj ? iconObj.icon : ICON_OPTIONS[0].icon,
+        isCustom: true,
+        key: item._id,
+        limit: item.limit,
+        usage: customUsages[item._id] || 0,
+      };
+    }),
+  ];
 
   return (
     <Box
@@ -266,28 +394,46 @@ export default function HealthSection() {
       >
         Zdravlje
       </Text>
+      <Button
+        colorScheme="teal"
+        mb={4}
+        onClick={() => setAddModalOpen(true)}
+        isLoading={customLoading}
+      >
+        Dodaj novu stavku
+      </Button>
       <SimpleGrid columns={{ base: 2, md: 4 }} spacing={6}>
-        {HEALTH_ITEMS.map((item) => {
-          const label = customLabels[item.key] || item.label;
-          const iconId = customIcons[item.key];
-          const iconObj = ICON_OPTIONS.find((ic) => ic.id === iconId);
-          const icon = iconObj ? iconObj.icon : item.icon;
-          return (
-            <VStack key={item.key} spacing={2}>
-              <UsageCircleIcon
-                maxUses={limits[item.key]}
-                used={usages[item.key]}
-                onUse={() => handleUse(item.key)}
-                icon={icon}
-                activeColor="rgb(211,92,45)"
-                size={90}
-              />
-              <Text color={colors.text} fontWeight="medium">
-                {label}
-              </Text>
-              <Text color={colors.accent} fontSize="sm">
-                {usages[item.key]} / {limits[item.key]}
-              </Text>
+        {allItems.map((item) => (
+          <VStack key={item.key} spacing={2}>
+            <UsageCircleIcon
+              maxUses={item.limit}
+              used={item.usage}
+              onUse={() => {
+                if (item.isCustom) {
+                  const newCustomUsages = {
+                    ...customUsages,
+                    [item.key]: Math.min(
+                      (customUsages[item.key] || 0) + 1,
+                      item.limit
+                    ),
+                  };
+                  setCustomUsages(newCustomUsages);
+                  saveHealth(usages, limits, newCustomUsages);
+                } else {
+                  handleUse(item.key);
+                }
+              }}
+              icon={item.icon}
+              activeColor="rgb(211,92,45)"
+              size={90}
+            />
+            <Text color={colors.text} fontWeight="medium">
+              {item.label}
+            </Text>
+            <Text color={colors.accent} fontSize="sm">
+              {item.usage} / {item.limit}
+            </Text>
+            <HStack spacing={2}>
               <Button
                 leftIcon={<FaEdit />}
                 size="xs"
@@ -298,16 +444,141 @@ export default function HealthSection() {
               >
                 Edit
               </Button>
-            </VStack>
-          );
-        })}
+              {item.isCustom && (
+                <Button
+                  size="xs"
+                  colorScheme="red"
+                  variant="outline"
+                  onClick={async () => {
+                    if (
+                      window.confirm(
+                        "Da li ste sigurni da želite da obrišete ovu stavku?"
+                      )
+                    ) {
+                      try {
+                        await healthCustomAPI.deleteCustomItem(item.key, token);
+                        setCustomItems((prev) =>
+                          prev.filter(
+                            (customItem) => customItem._id !== item.key
+                          )
+                        );
+                        // Ukloni usage iz customUsages
+                        const newCustomUsages = { ...customUsages };
+                        delete newCustomUsages[item.key];
+                        setCustomUsages(newCustomUsages);
+                        saveHealth(usages, limits, newCustomUsages);
+                        toast({
+                          title: "Stavka obrisana!",
+                          status: "success",
+                          duration: 1500,
+                        });
+                      } catch (err) {
+                        toast({
+                          title: "Greška pri brisanju",
+                          description: err.message,
+                          status: "error",
+                        });
+                      }
+                    }
+                  }}
+                >
+                  Delete
+                </Button>
+              )}
+            </HStack>
+          </VStack>
+        ))}
       </SimpleGrid>
       {saving && (
         <Text color={colors.accent} fontSize="sm" mt={2} textAlign="center">
           Čuvanje...
         </Text>
       )}
-      {/* Modal za edit limit, label i ikonicu */}
+      {/* Modal za dodavanje nove stavke */}
+      <Modal
+        isOpen={addModalOpen}
+        onClose={() => setAddModalOpen(false)}
+        isCentered
+      >
+        <ModalOverlay />
+        <ModalContent bg={colors.card} color={colors.text}>
+          <ModalHeader>Dodaj novu health stavku</ModalHeader>
+          <ModalCloseButton />
+          <ModalBody>
+            <Text mb={2} color={colors.text}>
+              Naslov:
+            </Text>
+            <Input
+              value={newLabel}
+              onChange={(e) => setNewLabel(e.target.value)}
+              size="lg"
+              mb={3}
+              bg={colors.input}
+              color={colors.text}
+              borderColor={colors.accent}
+              _placeholder={{ color: colors.accent }}
+            />
+            <Text mb={2} color={colors.text}>
+              Izaberi ikonicu:
+            </Text>
+            <SimpleGrid columns={5} spacing={2} mb={3}>
+              {ICON_OPTIONS.map((ic) => (
+                <Button
+                  key={ic.id}
+                  onClick={() => setNewIcon(ic.id)}
+                  bg={newIcon === ic.id ? colors.accent : colors.input}
+                  color={colors.text}
+                  border={
+                    newIcon === ic.id
+                      ? `2px solid ${colors.text}`
+                      : `1px solid ${colors.accent}`
+                  }
+                  _hover={{ bg: colors.accent, color: colors.card }}
+                  size="lg"
+                  p={2}
+                >
+                  {ic.icon}
+                </Button>
+              ))}
+            </SimpleGrid>
+            <Text mb={2} color={colors.text}>
+              Dnevni limit:
+            </Text>
+            <Input
+              type="number"
+              min={1}
+              max={99}
+              value={newLimit}
+              onChange={(e) => setNewLimit(e.target.value)}
+              size="lg"
+              bg={colors.input}
+              color={colors.text}
+              borderColor={colors.accent}
+              _placeholder={{ color: colors.accent }}
+            />
+          </ModalBody>
+          <ModalFooter>
+            <Button
+              onClick={() => setAddModalOpen(false)}
+              mr={3}
+              variant="ghost"
+            >
+              Otkaži
+            </Button>
+            <Button
+              colorScheme="teal"
+              onClick={handleAddCustom}
+              isLoading={customLoading}
+              bg={colors.accent}
+              color={colors.text}
+              _hover={{ bg: colors.text, color: colors.card }}
+            >
+              Dodaj
+            </Button>
+          </ModalFooter>
+        </ModalContent>
+      </Modal>
+      {/* Modal za edit limit, label i ikonicu ostaje kao pre */}
       <Modal isOpen={!!editKey} onClose={() => setEditKey(null)} isCentered>
         <ModalOverlay />
         <ModalContent bg={colors.card} color={colors.text}>

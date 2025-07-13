@@ -157,3 +157,32 @@ export const healthAPI = {
     });
   },
 };
+
+// Custom health stavke
+export const healthCustomAPI = {
+  getCustomItems: async (token) => {
+    return apiCall("/health/custom", {
+      headers: getAuthHeaders(token),
+    });
+  },
+  addCustomItem: async (item, token) => {
+    return apiCall("/health/custom", {
+      method: "POST",
+      headers: getAuthHeaders(token),
+      body: JSON.stringify(item),
+    });
+  },
+  updateCustomItem: async (id, item, token) => {
+    return apiCall(`/health/custom/${id}`, {
+      method: "PUT",
+      headers: getAuthHeaders(token),
+      body: JSON.stringify(item),
+    });
+  },
+  deleteCustomItem: async (id, token) => {
+    return apiCall(`/health/custom/${id}`, {
+      method: "DELETE",
+      headers: getAuthHeaders(token),
+    });
+  },
+};
