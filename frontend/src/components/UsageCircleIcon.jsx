@@ -1,6 +1,14 @@
 import React from "react";
 
-export default function UsageCircleIcon({ maxUses, used, onUse, size = 80, icon, activeColor = "yellow" }) {
+export default function UsageCircleIcon({
+  maxUses,
+  used,
+  onUse,
+  size = 80,
+  icon,
+  activeColor = "yellow",
+  disabled = false,
+}) {
   const radius = size / 2 - 10;
   const strokeWidth = 6;
   const center = size / 2;
@@ -12,8 +20,13 @@ export default function UsageCircleIcon({ maxUses, used, onUse, size = 80, icon,
     <svg
       width={size}
       height={size}
-      style={{ display: "block", margin: "0 auto", cursor: "pointer" }}
-      onClick={onUse}
+      style={{
+        display: "block",
+        margin: "0 auto",
+        cursor: disabled ? "not-allowed" : "pointer",
+        opacity: disabled ? 0.6 : 1,
+      }}
+      onClick={disabled ? undefined : onUse}
     >
       {[...Array(maxUses)].map((_, i) => {
         const startAngle = angleStep * i - 90 + gapAngle / 2;
@@ -38,7 +51,13 @@ export default function UsageCircleIcon({ maxUses, used, onUse, size = 80, icon,
           />
         );
       })}
-      <foreignObject x={center - 24} y={center - 24} width={48} height={48} pointerEvents="none">
+      <foreignObject
+        x={center - 24}
+        y={center - 24}
+        width={48}
+        height={48}
+        pointerEvents="none"
+      >
         <div
           style={{
             display: "flex",
@@ -46,7 +65,7 @@ export default function UsageCircleIcon({ maxUses, used, onUse, size = 80, icon,
             justifyContent: "center",
             width: 48,
             height: 48,
-            pointerEvents: "none"
+            pointerEvents: "none",
           }}
         >
           {icon}
