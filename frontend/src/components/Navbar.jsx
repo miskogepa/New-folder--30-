@@ -23,12 +23,30 @@ import { Link as RouterLink, useNavigate } from "react-router-dom";
 import { HamburgerIcon } from "@chakra-ui/icons";
 import { useUserStore } from "../store/userStore";
 
+// Custom paleta iz plan.md
+const lightColors = {
+  bg: "#A5ABAC", // METALLIC SILVER
+  card: "#656A69", // DIM GRAY
+  input: "#445253", // OUTER SPACE
+  text: "#2F3237", // DARK CHARCOAL
+  accent: "#3C4341", // ARSENIC
+};
+const darkColors = {
+  bg: "#505143", // OLIVE DRAB CAMOUFLAGE
+  card: "#6A6352", // BOY RED
+  input: "#878568", // CAMOUFLAGE GREEN
+  text: "#D5CCAB", // DARK VANILLA
+  accent: "#A3A289", // GRULLO
+};
+
 export default function Navbar() {
   const { colorMode, toggleColorMode } = useColorMode();
   const navigate = useNavigate();
   const user = useUserStore((state) => state.user);
   const logout = useUserStore((state) => state.logout);
   const { isOpen, onOpen, onClose } = useDisclosure();
+
+  const colors = colorMode === "light" ? lightColors : darkColors;
 
   const handleLogout = () => {
     logout();
@@ -42,6 +60,8 @@ export default function Navbar() {
         to="/edc"
         fontWeight="bold"
         fontSize={{ base: "lg", md: "md" }}
+        color={colors.text}
+        _hover={{ color: colors.accent }}
       >
         Moj EDC
       </Link>
@@ -50,6 +70,8 @@ export default function Navbar() {
         to="/backpack"
         fontWeight="bold"
         fontSize={{ base: "lg", md: "md" }}
+        color={colors.text}
+        _hover={{ color: colors.accent }}
       >
         Ranac
       </Link>
@@ -58,6 +80,8 @@ export default function Navbar() {
         to="/health"
         fontWeight="bold"
         fontSize={{ base: "lg", md: "md" }}
+        color={colors.text}
+        _hover={{ color: colors.accent }}
       >
         Zdravlje
       </Link>
@@ -68,7 +92,7 @@ export default function Navbar() {
     <Box
       as="nav"
       w="100%"
-      bg={colorMode === "light" ? "gray.200" : "gray.700"}
+      bg={colors.card}
       px={{ base: 2, md: 6 }}
       py={3}
       boxShadow="md"
@@ -86,22 +110,30 @@ export default function Navbar() {
             aria-label="Otvori meni"
             onClick={onOpen}
             fontSize="2xl"
+            color={colors.text}
+            _hover={{ bg: colors.accent, color: colors.card }}
           />
           <Drawer placement="left" onClose={onClose} isOpen={isOpen}>
             <DrawerOverlay />
-            <DrawerContent>
-              <DrawerCloseButton />
+            <DrawerContent bg={colors.card}>
+              <DrawerCloseButton color={colors.text} />
               <DrawerBody>
                 <VStack align="start" spacing={6} mt={10}>
                   {navLinks}
-                  <Button onClick={toggleColorMode} w="100%">
+                  <Button
+                    onClick={toggleColorMode}
+                    w="100%"
+                    color={colors.text}
+                    borderColor={colors.accent}
+                    _hover={{ bg: colors.accent, color: colors.card }}
+                  >
                     {colorMode === "light" ? "Dark" : "Light"} tema
                   </Button>
                   <Button colorScheme="red" onClick={handleLogout} w="100%">
                     Logout
                   </Button>
                   {user && (
-                    <Text fontSize="sm">
+                    <Text fontSize="sm" color={colors.text}>
                       Prijavljen kao: <b>{user.username}</b>
                     </Text>
                   )}
@@ -114,11 +146,17 @@ export default function Navbar() {
         <Hide below="md">
           <Flex align="center">
             {user && (
-              <Text mr={4} fontSize="sm">
+              <Text mr={4} fontSize="sm" color={colors.text}>
                 Prijavljen kao: <b>{user.username}</b>
               </Text>
             )}
-            <Button onClick={toggleColorMode} mr={2}>
+            <Button
+              onClick={toggleColorMode}
+              mr={2}
+              color={colors.text}
+              borderColor={colors.accent}
+              _hover={{ bg: colors.accent, color: colors.card }}
+            >
               {colorMode === "light" ? "Dark" : "Light"} tema
             </Button>
             <Button colorScheme="red" onClick={handleLogout}>
