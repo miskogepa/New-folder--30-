@@ -444,17 +444,18 @@ export default function HealthSection() {
               >
                 Edit
               </Button>
-              {item.isCustom && (
-                <Button
-                  size="xs"
-                  colorScheme="red"
-                  variant="outline"
-                  onClick={async () => {
-                    if (
-                      window.confirm(
-                        "Da li ste sigurni da želite da obrišete ovu stavku?"
-                      )
-                    ) {
+              <Button
+                size="xs"
+                colorScheme="red"
+                variant="outline"
+                onClick={async () => {
+                  if (
+                    window.confirm(
+                      "Da li ste sigurni da želite da obrišete ovu stavku?"
+                    )
+                  ) {
+                    if (item.isCustom) {
+                      // Brisanje custom item-a
                       try {
                         await healthCustomAPI.deleteCustomItem(item.key, token);
                         setCustomItems((prev) =>
@@ -479,12 +480,26 @@ export default function HealthSection() {
                           status: "error",
                         });
                       }
+                    } else {
+                      // Brisanje default item-a - samo ukloni iz prikaza
+                      const newUsages = { ...usages };
+                      delete newUsages[item.key];
+                      setUsages(newUsages);
+                      const newLimits = { ...limits };
+                      delete newLimits[item.key];
+                      setLimits(newLimits);
+                      saveHealth(newUsages, newLimits, customUsages);
+                      toast({
+                        title: "Stavka uklonjena!",
+                        status: "success",
+                        duration: 1500,
+                      });
                     }
-                  }}
-                >
-                  Delete
-                </Button>
-              )}
+                  }
+                }}
+              >
+                Delete
+              </Button>
             </HStack>
           </VStack>
         ))}
