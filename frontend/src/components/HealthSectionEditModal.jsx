@@ -189,9 +189,7 @@ export default function HealthSectionEditModal({
                   <Button
                     key={iconOption.key}
                     size="sm"
-                    variant={
-                      formData.iconKey === iconOption.key ? "solid" : "outline"
-                    }
+                    variant="ghost"
                     colorScheme={
                       formData.iconKey === iconOption.key ? "teal" : "gray"
                     }
@@ -206,13 +204,18 @@ export default function HealthSectionEditModal({
                         ? colors.card
                         : colors.text
                     }
-                    borderColor={colors.accent}
+                    border="none"
+                    boxShadow="none"
                     _hover={{
                       bg:
                         formData.iconKey === iconOption.key
                           ? colors.accent
                           : colors.input,
+                      border: "none",
+                      boxShadow: "none",
                     }}
+                    _active={{ border: "none", boxShadow: "none" }}
+                    _focus={{ border: "none", boxShadow: "none" }}
                   >
                     <VStack spacing={1}>
                       {iconOption.icon}

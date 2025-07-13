@@ -20,7 +20,14 @@ export default function UsageCircleIcon({
   const segmentAngle = angleStep - gapAngle;
 
   return (
-    <div style={{ textAlign: "center" }}>
+    <div
+      style={{
+        textAlign: "center",
+        border: "none",
+        background: "none",
+        boxShadow: "none",
+      }}
+    >
       <svg
         width={size}
         height={size}
@@ -29,6 +36,9 @@ export default function UsageCircleIcon({
           margin: "0 auto",
           cursor: disabled ? "not-allowed" : "pointer",
           opacity: disabled ? 0.6 : 1,
+          border: "none",
+          background: "none",
+          boxShadow: "none",
         }}
         onClick={disabled ? undefined : onUse}
       >
@@ -70,6 +80,9 @@ export default function UsageCircleIcon({
               width: 48,
               height: 48,
               pointerEvents: "none",
+              border: "none",
+              background: "none",
+              boxShadow: "none",
             }}
           >
             {icon}
@@ -87,7 +100,12 @@ export default function UsageCircleIcon({
           mt={2}
           leftIcon={<FaRotateLeft />}
           disabled={disabled}
-          _hover={{ bg: "red.100" }}
+          border="none"
+          boxShadow="none"
+          background="none"
+          _hover={{ bg: "none", border: "none", boxShadow: "none" }}
+          _active={{ bg: "none", border: "none", boxShadow: "none" }}
+          _focus={{ bg: "none", border: "none", boxShadow: "none" }}
         >
           Reset
         </Button>
