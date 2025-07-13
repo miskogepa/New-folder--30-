@@ -47,6 +47,36 @@ Aplikacija omogućava korisniku da virtuelno "spakuje" svoj EDC za taj dan, kori
 
 ---
 
+## Backend – Struktura i zavisnosti
+
+### Predložena struktura foldera za backend:
+
+- `config/` – konfiguracije (npr. konekcija na bazu, environment promenljive)
+- `controllers/` – logika za obradu zahteva (npr. korisnici, predmeti, ranac)
+- `middleware/` – custom middleware (npr. autentikacija, error handling, validacija)
+- `models/` – definicije modela (npr. User, Item, Backpack, HealthLog)
+- `routes/` – definicije API ruta (npr. /api/users, /api/items, /api/backpack)
+- `utils/` – pomoćne funkcije (npr. validacija, helperi za datume, slanje mejlova)
+- `services/` – poslovna logika (npr. servis za korisnike, servis za predmete)
+- `tests/` – testovi (unit i integration)
+- `app.js` ili `server.js` – ulazna tačka aplikacije
+
+### Osnovne developer dependencies koje treba instalirati:
+
+- `express` – backend framework
+- `dotenv` – za environment promenljive
+- `cors` – za CORS podršku
+- `mongoose` ili `sequelize` – za rad sa bazom (MongoDB ili SQL)
+- `bcrypt` – za heširanje lozinki
+- `jsonwebtoken` – za JWT autentikaciju
+- `nodemon` – za automatski restart servera tokom razvoja
+- `jest` i `supertest` – za testiranje
+- `eslint` i `prettier` – za stil i lintovanje koda
+- `morgan` – za logovanje zahteva
+- `body-parser` – za parsiranje body-ja (ako nije deo express-a)
+
+---
+
 ## Napomene
 
 - Za sada je fokus samo na virtuelnom rancu i izboru predmeta.
