@@ -361,7 +361,7 @@ export default function HealthSection() {
         limit: limits[item.key],
         usage: usages[item.key],
       };
-    }),
+    }).filter((item) => limits[item.key] !== undefined), // Prikaži samo stavke koje nisu obrisane
     ...customItems.map((item) => {
       const iconObj = ICON_OPTIONS.find((ic) => ic.id === item.iconId);
       return {
