@@ -1,15 +1,43 @@
 import HealthLog from "../models/HealthLog.model.js";
 
-export const createHealthLog = async (req, res) => {
+export const upsertHealthLog = async (req, res) => {
   try {
-    const log = new HealthLog(req.body);
-    await log.save();
-    res.status(201).json(log);
+    const { date, ...rest } = req.body;
+    const userId = req.user.id;
+    if (!date) return res.status(400).json({ error: "Date is required" });
+    const start = new Date(date);
+    const end = new Date(date);
+    end.setHours(23, 59, 59, 999);
+    const log = await HealthLog.findOneAndUpdate(
+      { userId, date: { $gte: start, $lte: end } },
+      { userId, date, ...rest },
+      { upsert: true, new: true }
+    );
+    res.json(log);
   } catch (error) {
     res.status(400).json({ error: error.message });
   }
 };
 
+export const getHealthLogForUserAndDate = async (req, res) => {
+  try {
+    const userId = req.user.id;
+    const date = req.query.date;
+    if (!date) return res.status(400).json({ error: "Date is required" });
+    const start = new Date(date);
+    const end = new Date(date);
+    end.setHours(23, 59, 59, 999);
+    const log = await HealthLog.findOne({
+      userId,
+      date: { $gte: start, $lte: end },
+    });
+    res.json(log || {});
+  } catch (error) {
+    res.status(500).json({ error: error.message });
+  }
+};
+
+// Ove funkcije ostavljamo za admin/advanced API
 export const getHealthLogs = async (req, res) => {
   try {
     const logs = await HealthLog.find();

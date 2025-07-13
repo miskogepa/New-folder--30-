@@ -1,12 +1,15 @@
-import React, { useState } from "react";
+import React, { useState, useEffect } from "react";
 import {
   Box,
   VStack,
-  HStack,
   Text,
-  Button,
   useColorMode,
   SimpleGrid,
+  Spinner,
+  useToast,
+  Input,
+  HStack,
+  Button,
 } from "@chakra-ui/react";
 import {
   FaGlassWater,
@@ -15,6 +18,8 @@ import {
   FaPills,
 } from "react-icons/fa6";
 import UsageCircleIcon from "./UsageCircleIcon";
+import { useUserStore } from "../store/userStore";
+import { healthAPI } from "../services/api";
 
 const HEALTH_ITEMS = [
   {
@@ -36,7 +41,7 @@ const HEALTH_ITEMS = [
     label: "Trening",
     icon: <FaDumbbell size={40} color="#D5CCAB" />,
     color: "#D5CCAB",
-    defaultLimit: 1,
+    defaultLimit: 2,
   },
   {
     key: "supplements",
@@ -58,10 +63,16 @@ const darkColors = {
   accent: "#A3A289",
 };
 
+function getToday() {
+  const d = new Date();
+  return d.toISOString().slice(0, 10);
+}
+
 export default function HealthSection() {
   const { colorMode } = useColorMode();
   const colors = colorMode === "light" ? lightColors : darkColors;
-  // Lokalni state za demo, kasnije povezujemo sa backendom
+  const { user, token } = useUserStore();
+  const toast = useToast();
   const [usages, setUsages] = useState({
     water: 0,
     food: 0,
@@ -74,13 +85,116 @@ export default function HealthSection() {
     training: 2,
     supplements: 2,
   });
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState("");
+  const [saving, setSaving] = useState(false);
+  const [date] = useState(getToday());
+
+  // Fetch health log on mount
+  useEffect(() => {
+    if (!user || !token) return;
+    setLoading(true);
+    setError("");
+    healthAPI
+      .getHealthLog(date, token)
+      .then((data) => {
+        setUsages({
+          water: data.water || 0,
+          food: data.food || 0,
+          training: data.training || 0,
+          supplements: data.supplements || 0,
+        });
+        setLimits({
+          water: data.waterLimit || 8,
+          food: data.foodLimit || 3,
+          training: data.trainingLimit || 2,
+          supplements: data.supplementsLimit || 2,
+        });
+      })
+      .catch((err) => {
+        setError(err.message || "Greška pri učitavanju zdravlja.");
+      })
+      .finally(() => setLoading(false));
+  }, [user, token, date]);
+
+  // Save to backend
+  const saveHealth = (newUsages, newLimits) => {
+    if (!user || !token) return;
+    setSaving(true);
+    healthAPI
+      .updateHealthLog(
+        {
+          userId: user.id || user._id,
+          date,
+          water: newUsages.water,
+          food: newUsages.food,
+          training: newUsages.training,
+          supplements: newUsages.supplements,
+          waterLimit: newLimits.water,
+          foodLimit: newLimits.food,
+          trainingLimit: newLimits.training,
+          supplementsLimit: newLimits.supplements,
+        },
+        token
+      )
+      .then(() => {
+        toast({
+          title: "Sačuvano!",
+          status: "success",
+          duration: 1200,
+          isClosable: true,
+        });
+      })
+      .catch((err) => {
+        toast({
+          title: "Greška pri čuvanju!",
+          description: err.message,
+          status: "error",
+          duration: 3000,
+          isClosable: true,
+        });
+      })
+      .finally(() => setSaving(false));
+  };
 
   const handleUse = (key) => {
-    setUsages((prev) => ({
-      ...prev,
-      [key]: Math.min(prev[key] + 1, limits[key]),
-    }));
+    const newUsages = {
+      ...usages,
+      [key]: Math.min(usages[key] + 1, limits[key]),
+    };
+    setUsages(newUsages);
+    saveHealth(newUsages, limits);
   };
+
+  const handleLimitChange = (key, value) => {
+    const newLimits = {
+      ...limits,
+      [key]: Math.max(1, parseInt(value) || 1),
+    };
+    setLimits(newLimits);
+    // Reset usage if new limit is lower
+    const newUsages = {
+      ...usages,
+      [key]: Math.min(usages[key], newLimits[key]),
+    };
+    setUsages(newUsages);
+    saveHealth(newUsages, newLimits);
+  };
+
+  if (loading) {
+    return (
+      <Box w="100%" textAlign="center" py={12}>
+        <Spinner size="xl" color={colors.accent} />
+      </Box>
+    );
+  }
+  if (error) {
+    return (
+      <Box w="100%" textAlign="center" py={12}>
+        <Text color="red.400">{error}</Text>
+      </Box>
+    );
+  }
 
   return (
     <Box
@@ -118,10 +232,33 @@ export default function HealthSection() {
             <Text color={colors.accent} fontSize="sm">
               {usages[item.key]} / {limits[item.key]}
             </Text>
-            {/* Kasnije: dugme/modal za podešavanje limita */}
+            <HStack spacing={1}>
+              <Text color={colors.text} fontSize="xs">
+                Limit:
+              </Text>
+              <Input
+                type="number"
+                value={limits[item.key]}
+                min={1}
+                max={99}
+                size="xs"
+                width="48px"
+                onChange={(e) => handleLimitChange(item.key, e.target.value)}
+                isDisabled={saving}
+                bg={colors.card}
+                color={colors.text}
+                borderColor={colors.accent}
+                _placeholder={{ color: colors.accent }}
+              />
+            </HStack>
           </VStack>
         ))}
       </SimpleGrid>
+      {saving && (
+        <Text color={colors.accent} fontSize="sm" mt={2} textAlign="center">
+          Čuvanje...
+        </Text>
+      )}
     </Box>
   );
 }

@@ -2,7 +2,8 @@ import express from "express";
 import asyncHandler from "express-async-handler";
 import auth from "../middleware/auth.js";
 import {
-  createHealthLog,
+  upsertHealthLog,
+  getHealthLogForUserAndDate,
   getHealthLogs,
   getHealthLogById,
   updateHealthLog,
@@ -11,8 +12,9 @@ import {
 
 const router = express.Router();
 
-router.get("/", auth, asyncHandler(getHealthLogs));
-router.post("/", auth, asyncHandler(createHealthLog));
+router.get("/", auth, asyncHandler(getHealthLogForUserAndDate));
+router.post("/", auth, asyncHandler(upsertHealthLog));
+router.get("/all", auth, asyncHandler(getHealthLogs)); // za admina
 router.get("/:id", auth, asyncHandler(getHealthLogById));
 router.put("/:id", auth, asyncHandler(updateHealthLog));
 router.delete("/:id", auth, asyncHandler(deleteHealthLog));
