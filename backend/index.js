@@ -9,6 +9,7 @@ import backpackRoutes from "./routes/backpack.routes.js";
 import itemUsageRoutes from "./routes/itemUsage.routes.js";
 import healthLogRoutes from "./routes/healthLog.routes.js";
 import healthItemRoutes from "./routes/healthItem.routes.js";
+import journalRoutes from "./routes/journal.routes";
 
 dotenv.config();
 
@@ -24,6 +25,7 @@ app.use("/api/backpacks", backpackRoutes);
 app.use("/api/item-usage", itemUsageRoutes);
 app.use("/api/health", healthLogRoutes);
 app.use("/api/health-items", healthItemRoutes);
+app.use("/api/journal", journalRoutes);
 
 // Error handler middleware
 app.use((err, req, res, next) => {

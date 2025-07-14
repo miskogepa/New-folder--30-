@@ -622,3 +622,119 @@ Ova tema koristi tamnije, "military" i prirodne tonove sa akcentom na crvenkastu
    - Refresh stranice (grid ostaje isti).
 
 ---
+
+## Funkcionalnost: Dnevnik (Journal)
+
+### 1. Proširenje Moj EDC – dodavanje predmeta tipa "notes" (dnevnik)
+
+- U formi za dodavanje novog predmeta u Moj EDC omogućiti izbor tipa "notes" (ili "dnevnik").
+- Kada korisnik doda predmet sa tipom "notes", backend i frontend ga tretiraju kao dnevnik (može imati posebnu ikonicu, npr. sveska ili olovka).
+- Prilikom prikaza predmeta u Moj EDC i u rancu, predmet tipa "notes" prikazuje se kao dnevnik.
+
+### 2. Zustand store za dnevnik
+
+- Napraviti poseban Zustand store (npr. `journalStore.js`) u `frontend/src/store/`.
+- Store čuva:
+  - listu dnevničkih unosa za korisnika (po datumu)
+  - trenutno izabrani unos (za prikaz/izmenu)
+  - async akcije za fetch, create, update i delete unosa (povezano sa backend API-jem)
+- Primer state-a:
+  ```js
+  {
+    entries: [{ date: '2024-06-01', text: '...' }, ...],
+    selectedDate: '2024-06-01',
+    fetchEntries, addEntry, updateEntry, deleteEntry
+  }
+  ```
+
+### 3. Stranica "Dnevnik"
+
+- Kreirati novu stranicu u `frontend/src/pages/Journal.jsx`.
+- Stranica prikazuje:
+  - Kalendar ili listu datuma (za izbor dana)
+  - Tekstualno polje za unos/izmenu dnevničkog zapisa
+  - Dugmad za čuvanje, izmenu i brisanje unosa
+  - Prikaz prethodnih unosa (istorija)
+- Prilikom otvaranja stranice, automatski se učitavaju svi unosi za korisnika (ili za izabrani datum).
+- UI/UX: jednostavan editor (textarea), dugme za čuvanje, lista datuma sa sažetkom unosa.
+
+### 4. Integracija sa rancem
+
+- Kada korisnik doda predmet tipa "notes" u ranac, omogućiti mu da direktno iz ranca otvori i piše dnevnički unos za taj dan.
+- Klikom na ikonicu dnevnika u rancu otvara se modal ili preusmerava na stranicu Dnevnik za taj dan.
+- Unos se automatski vezuje za datum ranca (npr. svaki dan ima svoj dnevnički zapis).
+- Prikaz u rancu: ikonica dnevnika, tooltip "Otvori dnevnik za ovaj dan".
+
+### 5. Backend proširenje (osnovno)
+
+- Dodati model JournalEntry (ili proširiti postojeći model ako već postoji):
+  - userId
+  - date
+  - text
+- Dodati rute:
+  - `GET /api/journal?date=YYYY-MM-DD` – vraća unos za taj dan
+  - `POST /api/journal` – kreira ili ažurira unos
+  - `DELETE /api/journal/:id` – briše unos
+- Zaštićene rute (JWT token obavezan).
+
+### 5a. Detaljan plan za backend implementaciju dnevnika
+
+#### Model (models/JournalEntry.model.js)
+
+- Napraviti novi Mongoose model `JournalEntry` sa sledećim poljima:
+  - `userId` (ObjectId, ref: 'User', required) – korisnik kome unos pripada
+  - `date` (String ili Date, required) – datum unosa (format: YYYY-MM-DD)
+  - `text` (String, required) – sadržaj dnevničkog zapisa
+  - `createdAt`, `updatedAt` (timestamps)
+- Dodati jedinstveni indeks na kombinaciju `userId` + `date` (jedan unos po korisniku po danu)
+
+#### Rute (routes/journal.routes.js)
+
+- `GET /api/journal?date=YYYY-MM-DD` – vraća unos za izabrani dan (ili sve unose ako nema datuma)
+- `GET /api/journal` – vraća sve unose za korisnika (opciono, sa paginacijom)
+- `POST /api/journal` – kreira ili ažurira unos za dan (ako postoji, ažurira; ako ne, kreira)
+- `PUT /api/journal/:id` – izmena unosa po ID-u
+- `DELETE /api/journal/:id` – brisanje unosa
+- Sve rute su zaštićene (JWT auth middleware)
+
+#### Kontroler (controllers/JournalEntry.controller.js)
+
+- Funkcije:
+  - `getEntryByDate` – vraća unos za korisnika i dan
+  - `getAllEntries` – vraća sve unose korisnika
+  - `createOrUpdateEntry` – kreira ili ažurira unos za dan
+  - `updateEntry` – izmena unosa po ID-u
+  - `deleteEntry` – brisanje unosa
+- Svuda proveriti da li je korisnik vlasnik unosa (userId === req.user.id)
+
+#### Middleware i validacija
+
+- Koristiti već postojeći JWT auth middleware za zaštitu ruta
+- Validacija inputa (date, text) – koristiti express-validator ili ručno
+- Proveriti da korisnik može da menja samo svoje unose
+
+#### Povezivanje sa korisnikom
+
+- Kada korisnik doda predmet tipa "notes" u Moj EDC, frontend može automatski kreirati prazan unos za taj dan (opciono)
+- Svi unosi su vezani za userId i date
+
+#### Testiranje (tests/journal.test.js)
+
+- Testirati:
+  - Kreiranje, izmenu, brisanje unosa
+  - Dohvatanje unosa po datumu i svih unosa
+  - Autorizaciju (korisnik ne može da menja tuđe unose)
+  - Validaciju inputa
+
+#### Proširenja (opciono za kasnije)
+
+- Dodati mogućnost pretrage po tekstu
+- Dodati tagove ili kategorije za unose
+- Omogućiti upload slika ili fajlova uz unos
+- Dodati automatsko pravljenje dnevničkog unosa kada se doda predmet tipa "notes" u ranac
+
+---
+
+6. Testirati: dodavanje, izmenu, brisanje i prikaz dnevničkih unosa, integraciju sa rancem
+
+---
