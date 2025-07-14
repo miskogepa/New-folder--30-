@@ -20,6 +20,7 @@ import { GiBackpack } from "react-icons/gi";
 import EdcItemSelectModal from "../components/EdcItemSelectModal";
 import { backpacksAPI, itemUsageAPI } from "../services/api";
 import { useUserStore } from "../store/userStore";
+import UsageCircleIcon from "../components/UsageCircleIcon";
 
 const HEALTH_ICON_MAP = {
   water: <FaGlassWater size={32} color="#D5CCAB" />,
@@ -47,6 +48,7 @@ export default function Backpack() {
   const [modalOpen, setModalOpen] = useState(false);
   const [modalGridIdx, setModalGridIdx] = useState(null);
   const [modalEdcType, setModalEdcType] = useState(null);
+  const [gridHealthUsages, setGridHealthUsages] = useState({});
 
   // Handler za dodavanje ikonice u grid (za sada samo klik, kasnije drag&drop)
   const handleAddToGrid = (item) => {
@@ -156,6 +158,16 @@ export default function Backpack() {
     }
   };
 
+  // Handler za korišćenje health ikonice u gridu
+  const handleGridHealthUse = (iconKey, limit) => {
+    const newValue = Math.min((gridHealthUsages[iconKey] || 0) + 1, limit);
+    setGridHealthUsages((prev) => ({ ...prev, [iconKey]: newValue }));
+  };
+  // Handler za reset health ikonice u gridu
+  const handleGridHealthReset = (iconKey) => {
+    setGridHealthUsages((prev) => ({ ...prev, [iconKey]: 0 }));
+  };
+
   return (
     <Flex
       direction="row"
@@ -233,12 +245,32 @@ export default function Backpack() {
                   item ? (e) => handleGridDragStart(e, idx) : undefined
                 }
               >
-                {/* Renderuj ikonicu na osnovu tipa */}
-                {item
-                  ? item.iconKey
-                    ? HEALTH_ICON_MAP[item.iconKey] // Health ikonica
-                    : getIconById(item.icon) // EDC ikonica
-                  : null}
+                {item ? (
+                  item.iconKey ? (
+                    <UsageCircleIcon
+                      maxUses={
+                        DEFAULT_HEALTH_ITEMS.find(
+                          (h) => h.iconKey === item.iconKey
+                        )?.limit || 1
+                      }
+                      used={gridHealthUsages[item.iconKey] || 0}
+                      onUse={() =>
+                        handleGridHealthUse(
+                          item.iconKey,
+                          DEFAULT_HEALTH_ITEMS.find(
+                            (h) => h.iconKey === item.iconKey
+                          )?.limit || 1
+                        )
+                      }
+                      onReset={() => handleGridHealthReset(item.iconKey)}
+                      icon={HEALTH_ICON_MAP[item.iconKey]}
+                      activeColor="#D55C2D"
+                      size={60}
+                    />
+                  ) : (
+                    getIconById(item.icon)
+                  )
+                ) : null}
               </Box>
             ))}
           </Grid>
