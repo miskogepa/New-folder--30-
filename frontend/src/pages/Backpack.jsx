@@ -51,7 +51,8 @@ function getTodayDateString() {
 export default function Backpack() {
   const { colorMode } = useColorMode();
   const { user, token } = useUserStore();
-  const { usages, loadHealthLog, updateUsage } = useHealthStore();
+  const { usages, loadHealthLog, updateUsage, healthItems, loadHealthItems } =
+    useHealthStore();
   const [gridItems, setGridItems] = useState(Array(GRID_SIZE).fill(null));
   const [backpackId, setBackpackId] = useState(null);
   // State za praćenje koja ćelija se drži (drag)
@@ -63,11 +64,12 @@ export default function Backpack() {
   // Ukloni nepotrebni lokalni state gridHealthUsages.
   const [currentDate, setCurrentDate] = useState(getTodayDateString());
 
-  // Fetch grid na mount-u
+  // Fetch grid i health items na mount-u
   useEffect(() => {
-    async function fetchGrid() {
+    async function fetchGridAndHealthItems() {
       if (!token) return;
       try {
+        await loadHealthItems(token);
         const today = getTodayDateString();
         const res = await backpacksAPI.getBackpacksByDate(today, token);
         let grid = Array(GRID_SIZE).fill(null);
@@ -81,8 +83,8 @@ export default function Backpack() {
         setBackpackId(null);
       }
     }
-    fetchGrid();
-  }, [token]);
+    fetchGridAndHealthItems();
+  }, [token, loadHealthItems]);
 
   // Dodajem useEffect za učitavanje health loga na mount-u i promenu datuma/tokena
   useEffect(() => {
@@ -110,12 +112,11 @@ export default function Backpack() {
     const firstEmpty = gridItems.findIndex((cell) => cell === null);
     if (firstEmpty !== -1) {
       let gridItem = null;
-      if (item.iconKey) {
-        gridItem = { type: "health", healthKey: item.iconKey };
+      if (item.iconKey || item.icon) {
+        gridItem = { type: "health", healthKey: item.iconKey || item.icon };
       } else if (item._id) {
         gridItem = { type: "edc", edcItemId: item._id };
       } else if (item.id) {
-        // fallback ako je samo id, koristi ga kao edcItemId
         gridItem = { type: "edc", edcItemId: item.id };
       }
       const newGrid = [...gridItems];
@@ -285,32 +286,33 @@ export default function Backpack() {
                   item ? (e) => handleGridDragStart(e, idx) : undefined
                 }
               >
-                {item ? (
-                  item.type === "health" ? (
-                    <UsageCircleIcon
-                      maxUses={
-                        DEFAULT_HEALTH_ITEMS.find(
+                {item
+                  ? item.type === "health"
+                    ? (() => {
+                        const healthItem = healthItems.find(
                           (h) => h.iconKey === item.healthKey
-                        )?.limit || 1
-                      }
-                      used={usages[item.healthKey] || 0}
-                      onUse={() =>
-                        handleGridHealthUse(
-                          item.healthKey,
-                          DEFAULT_HEALTH_ITEMS.find(
-                            (h) => h.iconKey === item.healthKey
-                          )?.limit || 1
-                        )
-                      }
-                      onReset={() => handleGridHealthReset(item.healthKey)}
-                      icon={HEALTH_ICON_MAP[item.healthKey]}
-                      activeColor="#D55C2D"
-                      size={60}
-                    />
-                  ) : (
-                    getIconById(item.edcItemId)
-                  )
-                ) : null}
+                        );
+                        return (
+                          <UsageCircleIcon
+                            maxUses={healthItem?.limit || 1}
+                            used={usages[item.healthKey] || 0}
+                            onUse={() =>
+                              handleGridHealthUse(
+                                item.healthKey,
+                                healthItem?.limit || 1
+                              )
+                            }
+                            onReset={() =>
+                              handleGridHealthReset(item.healthKey)
+                            }
+                            icon={HEALTH_ICON_MAP[item.healthKey]}
+                            activeColor="#D55C2D"
+                            size={60}
+                          />
+                        );
+                      })()
+                    : getIconById(item.edcItemId)
+                  : null}
               </Box>
             ))}
           </Grid>
@@ -330,18 +332,20 @@ export default function Backpack() {
         overflowY="auto"
       >
         {/* Prvo health ikonice (bez labela, iste kao u HealthSection.jsx) */}
-        {DEFAULT_HEALTH_ITEMS.map((item) => (
-          <IconButton
-            key={item.key}
-            aria-label={item.label}
-            icon={HEALTH_ICON_MAP[item.iconKey]}
-            size="lg"
-            variant="ghost"
-            onClick={() => handleAddToGrid({ ...item })}
-            draggable={true}
-            onDragStart={(e) => handleDragStart(e, { ...item })}
-          />
-        ))}
+        {healthItems &&
+          healthItems.length > 0 &&
+          healthItems.map((item) => (
+            <IconButton
+              key={item.key || item.iconKey || item.icon}
+              aria-label={item.label}
+              icon={HEALTH_ICON_MAP[item.iconKey] || HEALTH_ICON_MAP[item.icon]}
+              size="lg"
+              variant="ghost"
+              onClick={() => handleAddToGrid({ ...item })}
+              draggable={true}
+              onDragStart={(e) => handleDragStart(e, { ...item })}
+            />
+          ))}
         {/* Zatim EDC ikonice (bez labela) */}
         {EDC_ICONS.map((item, idx) => (
           <IconButton

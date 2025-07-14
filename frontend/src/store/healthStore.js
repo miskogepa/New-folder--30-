@@ -1,11 +1,12 @@
 import { create } from "zustand";
-import { healthAPI } from "../services/api";
+import { healthAPI, healthItemsAPI } from "../services/api";
 
 export const useHealthStore = create((set, get) => ({
   usages: {},
   currentDate: null,
   loading: false,
   error: null,
+  healthItems: [],
 
   loadHealthLog: async (date, token) => {
     set({ loading: true, error: null, currentDate: date });
@@ -22,6 +23,16 @@ export const useHealthStore = create((set, get) => ({
       set({ usages, loading: false });
     } catch (err) {
       set({ usages: {}, loading: false, error: err.message });
+    }
+  },
+
+  loadHealthItems: async (token) => {
+    set({ loading: true, error: null });
+    try {
+      const items = await healthItemsAPI.getHealthItems(token);
+      set({ healthItems: items, loading: false });
+    } catch (err) {
+      set({ healthItems: [], loading: false, error: err.message });
     }
   },
 
