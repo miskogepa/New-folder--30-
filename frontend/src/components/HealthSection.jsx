@@ -25,6 +25,7 @@ import UsageCircleIcon from "./UsageCircleIcon";
 import HealthSectionEditModal from "./HealthSectionEditModal";
 import { useUserStore } from "../store/userStore";
 import { healthAPI, healthItemsAPI } from "../services/api";
+import { useHealthStore } from "../store/healthStore";
 
 // Mapiranje ikona po ključevima
 const ICON_MAP = {
@@ -87,8 +88,10 @@ export default function HealthSection() {
   const { user, token } = useUserStore();
   const toast = useToast();
 
-  // State za health podatke
-  const [usages, setUsages] = useState({});
+  // Zustand store za health log
+  const { usages, loadHealthLog, updateUsage } = useHealthStore();
+
+  // State za health items
   const [healthItems, setHealthItems] = useState(DEFAULT_HEALTH_ITEMS);
   const [loading, setLoading] = useState(false);
   const [currentDate, setCurrentDate] = useState(() => {
@@ -127,6 +130,13 @@ export default function HealthSection() {
     }
   }, [user, token, healthItems, currentDate]);
 
+  // useEffect za učitavanje health loga iz store-a
+  useEffect(() => {
+    if (user && token) {
+      loadHealthLog(currentDate, token);
+    }
+  }, [user, token, currentDate, loadHealthLog]);
+
   const loadHealthItems = async () => {
     if (!user || !token) return;
 
@@ -151,13 +161,13 @@ export default function HealthSection() {
         }
 
         // Inicijalizuj usages za sve item-e
-        const initialUsages = {};
-        (response.length > 0 ? response : DEFAULT_HEALTH_ITEMS).forEach(
-          (item) => {
-            initialUsages[item.key] = 0;
-          }
-        );
-        setUsages(initialUsages);
+        // const initialUsages = {}; // Ovo je sada u store-u
+        // (response.length > 0 ? response : DEFAULT_HEALTH_ITEMS).forEach(
+        //   (item) => {
+        //     initialUsages[item.key] = 0;
+        //   }
+        // );
+        // setUsages(initialUsages);
       } else {
         // Ako nema podataka u bazi, kreiraj default health items
         await createDefaultHealthItems();
@@ -166,11 +176,11 @@ export default function HealthSection() {
       console.error("Greška pri učitavanju health items:", error);
       // Koristi default ako ne može da učita sa backend-a
       setHealthItems(DEFAULT_HEALTH_ITEMS);
-      const initialUsages = {};
-      DEFAULT_HEALTH_ITEMS.forEach((item) => {
-        initialUsages[item.key] = 0;
-      });
-      setUsages(initialUsages);
+      // const initialUsages = {}; // Ovo je sada u store-u
+      // DEFAULT_HEALTH_ITEMS.forEach((item) => {
+      //   initialUsages[item.key] = 0;
+      // });
+      // setUsages(initialUsages);
     }
   };
 
@@ -218,11 +228,11 @@ export default function HealthSection() {
       setHealthItems(createdItems);
 
       // Inicijalizuj usages
-      const initialUsages = {};
-      createdItems.forEach((item) => {
-        initialUsages[item.key] = 0;
-      });
-      setUsages(initialUsages);
+      // const initialUsages = {}; // Ovo je sada u store-u
+      // createdItems.forEach((item) => {
+      //   initialUsages[item.key] = 0;
+      // });
+      // setUsages(initialUsages);
 
       toast({
         title: "Uspešno",
@@ -235,11 +245,11 @@ export default function HealthSection() {
       console.error("Greška pri kreiranju default health items:", error);
       // Ako ne može da kreira u bazi, koristi default lokalno
       setHealthItems(DEFAULT_HEALTH_ITEMS);
-      const initialUsages = {};
-      DEFAULT_HEALTH_ITEMS.forEach((item) => {
-        initialUsages[item.key] = 0;
-      });
-      setUsages(initialUsages);
+      // const initialUsages = {}; // Ovo je sada u store-u
+      // DEFAULT_HEALTH_ITEMS.forEach((item) => {
+      //   initialUsages[item.key] = 0;
+      // });
+      // setUsages(initialUsages);
     }
   };
 
@@ -256,18 +266,18 @@ export default function HealthSection() {
         const todayData = response[0]; // Uzmi prvi log za današnji datum
 
         // Dinamički ažuriraj usages za sve health item-e
-        setUsages((prev) => {
-          const updatedUsages = { ...prev };
+        // setUsages((prev) => { // Ovo je sada u store-u
+        //   const updatedUsages = { ...prev };
 
-          // Ažuriraj samo one ključeve koji postoje u health items
-          healthItems.forEach((item) => {
-            if (todayData[item.key] !== undefined) {
-              updatedUsages[item.key] = todayData[item.key] || 0;
-            }
-          });
+        //   // Ažuriraj samo one ključeve koji postoje u health items
+        //   healthItems.forEach((item) => {
+        //     if (todayData[item.key] !== undefined) {
+        //       updatedUsages[item.key] = todayData[item.key] || 0;
+        //     }
+        //   });
 
-          return updatedUsages;
-        });
+        //   return updatedUsages;
+        // });
       }
     } catch (error) {
       console.error("Greška pri učitavanju health podataka:", error);
@@ -283,7 +293,8 @@ export default function HealthSection() {
     }
   };
 
-  const handleUse = async (key) => {
+  // handleUse koristi updateUsage iz store-a
+  const handleUse = (key) => {
     if (!user || !token) {
       toast({
         title: "Greška",
@@ -302,21 +313,15 @@ export default function HealthSection() {
     const newValue = Math.min((usages[key] || 0) + 1, item.limit);
 
     // Optimistički update UI-a
-    setUsages((prev) => ({
-      ...prev,
-      [key]: newValue,
-    }));
+    // setUsages((prev) => ({ // Ovo je sada u store-u
+    //   ...prev,
+    //   [key]: newValue,
+    // }));
 
     try {
       const formattedDate = formatDateForAPI(currentDate);
       // Pošalji podatke na backend
-      await healthAPI.updateHealthLog(
-        {
-          date: formattedDate,
-          [key]: newValue,
-        },
-        token
-      );
+      updateUsage(key, newValue, formattedDate, token);
 
       toast({
         title: "Uspešno",
@@ -329,10 +334,10 @@ export default function HealthSection() {
       console.error("Greška pri ažuriranju:", error);
 
       // Vrati na prethodnu vrednost ako je došlo do greške
-      setUsages((prev) => ({
-        ...prev,
-        [key]: usages[key] || 0,
-      }));
+      // setUsages((prev) => ({ // Ovo je sada u store-u
+      //   ...prev,
+      //   [key]: usages[key] || 0,
+      // }));
 
       toast({
         title: "Greška",
@@ -344,7 +349,8 @@ export default function HealthSection() {
     }
   };
 
-  const handleReset = async (key) => {
+  // handleReset koristi updateUsage iz store-a
+  const handleReset = (key) => {
     if (!user || !token) {
       toast({
         title: "Greška",
@@ -361,21 +367,15 @@ export default function HealthSection() {
     if (!item) return;
 
     // Optimistički update UI-a
-    setUsages((prev) => ({
-      ...prev,
-      [key]: 0,
-    }));
+    // setUsages((prev) => ({ // Ovo je sada u store-u
+    //   ...prev,
+    //   [key]: 0,
+    // }));
 
     try {
       const formattedDate = formatDateForAPI(currentDate);
       // Pošalji podatke na backend
-      await healthAPI.updateHealthLog(
-        {
-          date: formattedDate,
-          [key]: 0,
-        },
-        token
-      );
+      updateUsage(key, 0, formattedDate, token);
 
       toast({
         title: "Uspešno",
@@ -388,10 +388,10 @@ export default function HealthSection() {
       console.error("Greška pri resetovanju:", error);
 
       // Vrati na prethodnu vrednost ako je došlo do greške
-      setUsages((prev) => ({
-        ...prev,
-        [key]: usages[key] || 0,
-      }));
+      // setUsages((prev) => ({ // Ovo je sada u store-u
+      //   ...prev,
+      //   [key]: usages[key] || 0,
+      // }));
 
       toast({
         title: "Greška",

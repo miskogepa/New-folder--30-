@@ -21,6 +21,7 @@ import EdcItemSelectModal from "../components/EdcItemSelectModal";
 import { backpacksAPI, itemUsageAPI, healthAPI } from "../services/api";
 import { useUserStore } from "../store/userStore";
 import UsageCircleIcon from "../components/UsageCircleIcon";
+import { useHealthStore } from "../store/healthStore";
 
 const HEALTH_ICON_MAP = {
   water: <FaGlassWater size={32} color="#D5CCAB" />,
@@ -50,6 +51,7 @@ function getTodayDateString() {
 export default function Backpack() {
   const { colorMode } = useColorMode();
   const { user, token } = useUserStore();
+  const { usages, loadHealthLog, updateUsage } = useHealthStore();
   const [gridItems, setGridItems] = useState(Array(GRID_SIZE).fill(null));
   // State za praćenje koja ćelija se drži (drag)
   const [draggedGridIdx, setDraggedGridIdx] = useState(null);
@@ -62,26 +64,8 @@ export default function Backpack() {
 
   // Učitavanje health loga za dan
   useEffect(() => {
-    const fetchHealthLog = async () => {
-      if (!token) return;
-      try {
-        const response = await healthAPI.getHealthLogForDay(currentDate, token);
-        const usages = {};
-        DEFAULT_HEALTH_ITEMS.forEach((item) => {
-          usages[item.iconKey] = response[item.iconKey] || 0;
-        });
-        setGridHealthUsages(usages);
-      } catch {
-        // fallback na 0
-        const usages = {};
-        DEFAULT_HEALTH_ITEMS.forEach((item) => {
-          usages[item.iconKey] = 0;
-        });
-        setGridHealthUsages(usages);
-      }
-    };
-    fetchHealthLog();
-  }, [currentDate, token]);
+    if (token) loadHealthLog(currentDate, token);
+  }, [currentDate, token, loadHealthLog]);
 
   // Handler za dodavanje ikonice u grid (za sada samo klik, kasnije drag&drop)
   const handleAddToGrid = (item) => {
@@ -192,32 +176,13 @@ export default function Backpack() {
   };
 
   // Handler za korišćenje health ikonice u gridu
-  const handleGridHealthUse = async (iconKey, limit) => {
-    const newValue = Math.min((gridHealthUsages[iconKey] || 0) + 1, limit);
-    setGridHealthUsages((prev) => ({ ...prev, [iconKey]: newValue }));
-    try {
-      await healthAPI.updateHealthLog(
-        { date: currentDate, [iconKey]: newValue },
-        token
-      );
-    } catch {
-      setGridHealthUsages((prev) => ({
-        ...prev,
-        [iconKey]: (prev[iconKey] || 1) - 1,
-      }));
-    }
+  const handleGridHealthUse = (iconKey, limit) => {
+    const newValue = Math.min((usages[iconKey] || 0) + 1, limit);
+    updateUsage(iconKey, newValue, currentDate, token);
   };
   // Handler za reset health ikonice u gridu
-  const handleGridHealthReset = async (iconKey) => {
-    setGridHealthUsages((prev) => ({ ...prev, [iconKey]: 0 }));
-    try {
-      await healthAPI.updateHealthLog(
-        { date: currentDate, [iconKey]: 0 },
-        token
-      );
-    } catch {
-      // fallback na 0
-    }
+  const handleGridHealthReset = (iconKey) => {
+    updateUsage(iconKey, 0, currentDate, token);
   };
 
   return (
@@ -305,7 +270,7 @@ export default function Backpack() {
                           (h) => h.iconKey === item.iconKey
                         )?.limit || 1
                       }
-                      used={gridHealthUsages[item.iconKey] || 0}
+                      used={usages[item.iconKey] || 0}
                       onUse={() =>
                         handleGridHealthUse(
                           item.iconKey,
