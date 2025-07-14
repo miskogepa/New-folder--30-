@@ -1,4 +1,4 @@
-import React, { useState } from "react";
+import React, { useState, useEffect } from "react";
 import {
   Box,
   Grid,
@@ -18,7 +18,7 @@ import {
 } from "react-icons/fa6";
 import { GiBackpack } from "react-icons/gi";
 import EdcItemSelectModal from "../components/EdcItemSelectModal";
-import { backpacksAPI, itemUsageAPI } from "../services/api";
+import { backpacksAPI, itemUsageAPI, healthAPI } from "../services/api";
 import { useUserStore } from "../store/userStore";
 import UsageCircleIcon from "../components/UsageCircleIcon";
 
@@ -38,6 +38,15 @@ function getIconById(id) {
   return found ? found.icon : null;
 }
 
+// Helper funkcija za današnji datum
+function getTodayDateString() {
+  const today = new Date();
+  const year = today.getFullYear();
+  const month = String(today.getMonth() + 1).padStart(2, "0");
+  const day = String(today.getDate()).padStart(2, "0");
+  return `${year}-${month}-${day}`;
+}
+
 export default function Backpack() {
   const { colorMode } = useColorMode();
   const { user, token } = useUserStore();
@@ -49,6 +58,30 @@ export default function Backpack() {
   const [modalGridIdx, setModalGridIdx] = useState(null);
   const [modalEdcType, setModalEdcType] = useState(null);
   const [gridHealthUsages, setGridHealthUsages] = useState({});
+  const [currentDate, setCurrentDate] = useState(getTodayDateString());
+
+  // Učitavanje health loga za dan
+  useEffect(() => {
+    const fetchHealthLog = async () => {
+      if (!token) return;
+      try {
+        const response = await healthAPI.getHealthLogForDay(currentDate, token);
+        const usages = {};
+        DEFAULT_HEALTH_ITEMS.forEach((item) => {
+          usages[item.iconKey] = response[item.iconKey] || 0;
+        });
+        setGridHealthUsages(usages);
+      } catch {
+        // fallback na 0
+        const usages = {};
+        DEFAULT_HEALTH_ITEMS.forEach((item) => {
+          usages[item.iconKey] = 0;
+        });
+        setGridHealthUsages(usages);
+      }
+    };
+    fetchHealthLog();
+  }, [currentDate, token]);
 
   // Handler za dodavanje ikonice u grid (za sada samo klik, kasnije drag&drop)
   const handleAddToGrid = (item) => {
@@ -159,13 +192,32 @@ export default function Backpack() {
   };
 
   // Handler za korišćenje health ikonice u gridu
-  const handleGridHealthUse = (iconKey, limit) => {
+  const handleGridHealthUse = async (iconKey, limit) => {
     const newValue = Math.min((gridHealthUsages[iconKey] || 0) + 1, limit);
     setGridHealthUsages((prev) => ({ ...prev, [iconKey]: newValue }));
+    try {
+      await healthAPI.updateHealthLog(
+        { date: currentDate, [iconKey]: newValue },
+        token
+      );
+    } catch {
+      setGridHealthUsages((prev) => ({
+        ...prev,
+        [iconKey]: (prev[iconKey] || 1) - 1,
+      }));
+    }
   };
   // Handler za reset health ikonice u gridu
-  const handleGridHealthReset = (iconKey) => {
+  const handleGridHealthReset = async (iconKey) => {
     setGridHealthUsages((prev) => ({ ...prev, [iconKey]: 0 }));
+    try {
+      await healthAPI.updateHealthLog(
+        { date: currentDate, [iconKey]: 0 },
+        token
+      );
+    } catch {
+      // fallback na 0
+    }
   };
 
   return (
