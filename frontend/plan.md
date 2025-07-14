@@ -526,3 +526,41 @@ Ova tema koristi tamnije, "military" i prirodne tonove sa akcentom na crvenkastu
 3. Prikaz i logika za pakovanje ranca (sa override usage limit-a)
 
 ---
+
+## Dizajn i funkcionalnost stranice "Ranac" (Backpack)
+
+### Prikaz ranca (Backpack grid)
+
+- **Leva strana ekrana**: Prikazuje se grid veličine **3x6** (3 kolone, 6 redova).
+- Grid je prilagođen za prikaz na mobilnom telefonu – ako ne može ceo grid da stane na ekran, omogućiti vertikalni skrol.
+- Svaka ćelija može biti prazna ili sadržati predmet (ikonicu).
+- U praznim ćelijama je prikazana silueta ranca u pozadini (opciono, radi vizuelnog identiteta).
+
+### Sidebar sa ponuđenim ikonicama (desna strana)
+
+- Sa desne strane se prikazuje **jedan vertikalni red ikonica** (ikonice idu jedna ispod druge).
+- Prvo se prikazuju **ikonice iz sekcije Zdravlje** (voda, hrana, trening, suplementi/lekovi, itd. – preuzimaju se iz HealthSection.jsx/HealthSectionEditModal.jsx).
+- Nakon health ikonica, prikazuju se EDC predmeti korisnika: lampa, multitool, sat, dnevnik itd.
+- Ikonice su klikabilne – klikom na ikonicu ona se dodaje u prvu slobodnu ćeliju grida ranca.
+
+### Dodavanje i korišćenje health ikonica u rancu
+
+- Health ikonice (voda, hrana, trening, suplementi) mogu se dodati u ranac isto kao i EDC predmeti.
+- Kada se health ikonica nalazi u rancu, korisnik može da menja njeno stanje direktno iz ranca:
+  - Klikom na ikonicu u rancu pojavljuje se crtica oko ikonice (vizuelni feedback) koja označava da je korisnik npr. popio čašu vode.
+  - Broj crtica odgovara maksimalnom broju upotreba za taj dan (npr. 8 za vodu, 3 za hranu, itd.).
+  - Svaki klik na plus/crticu ažurira stanje i u bazi (sinhronizacija sa backend-om).
+- Stanje health ikonica je uvek sinhronizovano sa HealthSection komponentom i backend-om.
+
+### Responsive dizajn
+
+- Grid i sidebar su prilagođeni za mobilne uređaje.
+- Ako grid ne može da stane na ekran, omogućiti skrolovanje.
+- Sidebar sa ikonicama je uvek vidljiv i lako dostupan korisniku.
+
+### Dnevnik (planirano za kasnije)
+
+- Biće dodata funkcija "Dnevnik" gde korisnik može da upisuje dnevni unos za taj dan (npr. beleške, napomene, aktivnosti).
+- Ova funkcionalnost će biti implementirana u posebnoj sekciji kasnije.
+
+---

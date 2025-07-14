@@ -23,6 +23,7 @@ import {
 import EdcItemList from "./components/EdcItemList";
 import EdcItemEditModal from "./components/EdcItemEditModal";
 import HealthSection from "./components/HealthSection";
+import Backpack from "./pages/Backpack";
 
 const lightColors = {
   bg: "#A5ABAC",
@@ -126,7 +127,7 @@ function EdcPage() {
 }
 
 function BackpackPage() {
-  return <div style={{ padding: 32 }}>Ranac stranica</div>;
+  return <Backpack />;
 }
 function HealthPage() {
   const { colorMode } = useColorMode();
