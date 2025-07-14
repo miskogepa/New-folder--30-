@@ -17,6 +17,9 @@ import {
   FaPills,
 } from "react-icons/fa6";
 import { GiBackpack } from "react-icons/gi";
+import EdcItemSelectModal from "../components/EdcItemSelectModal";
+import { backpacksAPI, itemUsageAPI } from "../services/api";
+import { useUserStore } from "../store/userStore";
 
 const HEALTH_ICON_MAP = {
   water: <FaGlassWater size={32} color="#D5CCAB" />,
@@ -29,9 +32,21 @@ const GRID_ROWS = 6;
 const GRID_COLS = 3;
 const GRID_SIZE = GRID_ROWS * GRID_COLS;
 
+function getIconById(id) {
+  const found = EDC_ICONS.find((ic) => ic.id === id);
+  return found ? found.icon : null;
+}
+
 export default function Backpack() {
   const { colorMode } = useColorMode();
+  const { user, token } = useUserStore();
   const [gridItems, setGridItems] = useState(Array(GRID_SIZE).fill(null));
+  // State za praćenje koja ćelija se drži (drag)
+  const [draggedGridIdx, setDraggedGridIdx] = useState(null);
+  // Modal state
+  const [modalOpen, setModalOpen] = useState(false);
+  const [modalGridIdx, setModalGridIdx] = useState(null);
+  const [modalEdcType, setModalEdcType] = useState(null);
 
   // Handler za dodavanje ikonice u grid (za sada samo klik, kasnije drag&drop)
   const handleAddToGrid = (item) => {
@@ -54,7 +69,7 @@ export default function Backpack() {
     } else if (item.id) {
       e.dataTransfer.setData(
         "application/json",
-        JSON.stringify({ type: "edc", id: item.id })
+        JSON.stringify({ type: "edc", id: item.id, edcType: item.id })
       );
     }
   };
@@ -72,18 +87,17 @@ export default function Backpack() {
       );
       if (found) {
         item = { ...found };
+        // Dodaj odmah health item u grid
+        const newGrid = [...gridItems];
+        newGrid[idx] = item;
+        setGridItems(newGrid);
+        // TODO: Backend sync za health log
       }
     } else if (dropData.type === "edc") {
-      // Pronađi EDC item po id
-      const found = EDC_ICONS.find((e) => e.id === dropData.id);
-      if (found) {
-        item = { ...found };
-      }
-    }
-    if (item) {
-      const newGrid = [...gridItems];
-      newGrid[idx] = item;
-      setGridItems(newGrid);
+      // Otvori modal za izbor varijante
+      setModalGridIdx(idx);
+      setModalEdcType(dropData.id); // id je zapravo tip iz ICONS (npr. "lampa")
+      setModalOpen(true);
     }
   };
 
@@ -91,8 +105,66 @@ export default function Backpack() {
     e.preventDefault();
   };
 
+  // Handler za drag iz grida
+  const handleGridDragStart = (e, idx) => {
+    setDraggedGridIdx(idx);
+    e.dataTransfer.setData("text/plain", idx.toString());
+  };
+
+  // Handler za drop van grida (na Flex parent)
+  const handleOuterDrop = (e) => {
+    e.preventDefault();
+    // Ako je dragovan grid idx, obriši ga
+    if (draggedGridIdx !== null) {
+      const newGrid = [...gridItems];
+      newGrid[draggedGridIdx] = null;
+      setGridItems(newGrid);
+      setDraggedGridIdx(null);
+      // TODO: Pozvati API za brisanje iz baze ako je potrebno
+    }
+  };
+
+  const handleOuterDragOver = (e) => {
+    e.preventDefault();
+  };
+
+  // Kada korisnik izabere varijantu iz modala
+  const handleSelectEdcVariant = async (selectedItem) => {
+    if (modalGridIdx === null) return;
+    const newGrid = [...gridItems];
+    newGrid[modalGridIdx] = selectedItem;
+    setGridItems(newGrid);
+    setModalOpen(false);
+    setModalGridIdx(null);
+    setModalEdcType(null);
+    // Backend sync: dodaj item-usage ili update backpack
+    try {
+      // Primer: dodavanje item-usage (možeš prilagoditi prema svojoj logici)
+      if (user && token) {
+        await itemUsageAPI.updateItemUsage(
+          {
+            backpackId: "CURRENT_BACKPACK_ID", // TODO: zameni pravim ID-jem
+            edcItemId: selectedItem._id,
+            usedCount: 0,
+          },
+          token
+        );
+      }
+    } catch (err) {
+      // TODO: error handling
+      console.error("Greška pri dodavanju predmeta u ranac:", err);
+    }
+  };
+
   return (
-    <Flex direction="row" w="100vw" h="100vh" overflow="hidden">
+    <Flex
+      direction="row"
+      w="100vw"
+      h="100vh"
+      overflow="hidden"
+      onDrop={handleOuterDrop}
+      onDragOver={handleOuterDragOver}
+    >
       {/* Leva strana: GRID */}
       <Box flex="1" overflowY="auto" p={2} position="relative">
         {/* Grid container sa siluetom ranca iznad ćelija */}
@@ -156,12 +228,16 @@ export default function Backpack() {
                 zIndex={4}
                 onDrop={(e) => handleDrop(e, idx)}
                 onDragOver={handleDragOver}
+                draggable={!!item}
+                onDragStart={
+                  item ? (e) => handleGridDragStart(e, idx) : undefined
+                }
               >
                 {/* Renderuj ikonicu na osnovu tipa */}
                 {item
                   ? item.iconKey
                     ? HEALTH_ICON_MAP[item.iconKey] // Health ikonica
-                    : item.icon // EDC ikonica
+                    : getIconById(item.icon) // EDC ikonica
                   : null}
               </Box>
             ))}
@@ -208,6 +284,12 @@ export default function Backpack() {
           />
         ))}
       </VStack>
+      <EdcItemSelectModal
+        isOpen={modalOpen}
+        onClose={() => setModalOpen(false)}
+        edcType={modalEdcType}
+        onSelect={handleSelectEdcVariant}
+      />
     </Flex>
   );
 }
