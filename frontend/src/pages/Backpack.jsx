@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from "react";
+import React, { useState, useEffect, useCallback } from "react";
 import {
   Box,
   Grid,
@@ -53,27 +53,75 @@ export default function Backpack() {
   const { user, token } = useUserStore();
   const { usages, loadHealthLog, updateUsage } = useHealthStore();
   const [gridItems, setGridItems] = useState(Array(GRID_SIZE).fill(null));
+  const [backpackId, setBackpackId] = useState(null);
   // State za praćenje koja ćelija se drži (drag)
   const [draggedGridIdx, setDraggedGridIdx] = useState(null);
   // Modal state
   const [modalOpen, setModalOpen] = useState(false);
   const [modalGridIdx, setModalGridIdx] = useState(null);
   const [modalEdcType, setModalEdcType] = useState(null);
-  const [gridHealthUsages, setGridHealthUsages] = useState({});
+  // Ukloni nepotrebni lokalni state gridHealthUsages.
   const [currentDate, setCurrentDate] = useState(getTodayDateString());
 
-  // Učitavanje health loga za dan
+  // Fetch grid na mount-u
+  useEffect(() => {
+    async function fetchGrid() {
+      if (!token) return;
+      try {
+        const today = getTodayDateString();
+        const res = await backpacksAPI.getBackpacksByDate(today, token);
+        let grid = Array(GRID_SIZE).fill(null);
+        if (res && res.grid && Array.isArray(res.grid)) {
+          grid = [...res.grid];
+        }
+        setGridItems(grid);
+        setBackpackId(res && res._id ? res._id : null);
+      } catch (err) {
+        setGridItems(Array(GRID_SIZE).fill(null));
+        setBackpackId(null);
+      }
+    }
+    fetchGrid();
+  }, [token]);
+
+  // Dodajem useEffect za učitavanje health loga na mount-u i promenu datuma/tokena
   useEffect(() => {
     if (token) loadHealthLog(currentDate, token);
   }, [currentDate, token, loadHealthLog]);
 
-  // Handler za dodavanje ikonice u grid (za sada samo klik, kasnije drag&drop)
+  // Sync grid sa backendom na svaku promenu
+  const syncGrid = useCallback(
+    async (newGrid) => {
+      if (!token) return;
+      const today = getTodayDateString();
+      try {
+        const payload = { date: today, grid: newGrid };
+        const res = await backpacksAPI.createBackpack(payload, token);
+        setBackpackId(res && res._id ? res._id : null);
+      } catch (err) {
+        // Optionally handle error
+      }
+    },
+    [token]
+  );
+
+  // Handler za dodavanje ikonice u grid
   const handleAddToGrid = (item) => {
     const firstEmpty = gridItems.findIndex((cell) => cell === null);
     if (firstEmpty !== -1) {
+      let gridItem = null;
+      if (item.iconKey) {
+        gridItem = { type: "health", healthKey: item.iconKey };
+      } else if (item._id) {
+        gridItem = { type: "edc", edcItemId: item._id };
+      } else if (item.id) {
+        // fallback ako je samo id, koristi ga kao edcItemId
+        gridItem = { type: "edc", edcItemId: item.id };
+      }
       const newGrid = [...gridItems];
-      newGrid[firstEmpty] = item;
+      newGrid[firstEmpty] = gridItem;
       setGridItems(newGrid);
+      syncGrid(newGrid);
     }
   };
 
@@ -98,24 +146,16 @@ export default function Backpack() {
     const data = e.dataTransfer.getData("application/json");
     if (!data) return;
     const dropData = JSON.parse(data);
-    let item = null;
+    let gridItem = null;
     if (dropData.type === "health") {
-      // Pronađi health item po iconKey
-      const found = DEFAULT_HEALTH_ITEMS.find(
-        (h) => h.iconKey === dropData.iconKey
-      );
-      if (found) {
-        item = { ...found };
-        // Dodaj odmah health item u grid
-        const newGrid = [...gridItems];
-        newGrid[idx] = item;
-        setGridItems(newGrid);
-        // TODO: Backend sync za health log
-      }
+      gridItem = { type: "health", healthKey: dropData.iconKey };
+      const newGrid = [...gridItems];
+      newGrid[idx] = gridItem;
+      setGridItems(newGrid);
+      syncGrid(newGrid);
     } else if (dropData.type === "edc") {
-      // Otvori modal za izbor varijante
       setModalGridIdx(idx);
-      setModalEdcType(dropData.id); // id je zapravo tip iz ICONS (npr. "lampa")
+      setModalEdcType(dropData.id);
       setModalOpen(true);
     }
   };
@@ -133,13 +173,12 @@ export default function Backpack() {
   // Handler za drop van grida (na Flex parent)
   const handleOuterDrop = (e) => {
     e.preventDefault();
-    // Ako je dragovan grid idx, obriši ga
     if (draggedGridIdx !== null) {
       const newGrid = [...gridItems];
       newGrid[draggedGridIdx] = null;
       setGridItems(newGrid);
       setDraggedGridIdx(null);
-      // TODO: Pozvati API za brisanje iz baze ako je potrebno
+      syncGrid(newGrid);
     }
   };
 
@@ -151,28 +190,12 @@ export default function Backpack() {
   const handleSelectEdcVariant = async (selectedItem) => {
     if (modalGridIdx === null) return;
     const newGrid = [...gridItems];
-    newGrid[modalGridIdx] = selectedItem;
+    newGrid[modalGridIdx] = { type: "edc", edcItemId: selectedItem._id };
     setGridItems(newGrid);
     setModalOpen(false);
     setModalGridIdx(null);
     setModalEdcType(null);
-    // Backend sync: dodaj item-usage ili update backpack
-    try {
-      // Primer: dodavanje item-usage (možeš prilagoditi prema svojoj logici)
-      if (user && token) {
-        await itemUsageAPI.updateItemUsage(
-          {
-            backpackId: "CURRENT_BACKPACK_ID", // TODO: zameni pravim ID-jem
-            edcItemId: selectedItem._id,
-            usedCount: 0,
-          },
-          token
-        );
-      }
-    } catch (err) {
-      // TODO: error handling
-      console.error("Greška pri dodavanju predmeta u ranac:", err);
-    }
+    syncGrid(newGrid);
   };
 
   // Handler za korišćenje health ikonice u gridu
@@ -263,29 +286,29 @@ export default function Backpack() {
                 }
               >
                 {item ? (
-                  item.iconKey ? (
+                  item.type === "health" ? (
                     <UsageCircleIcon
                       maxUses={
                         DEFAULT_HEALTH_ITEMS.find(
-                          (h) => h.iconKey === item.iconKey
+                          (h) => h.iconKey === item.healthKey
                         )?.limit || 1
                       }
-                      used={usages[item.iconKey] || 0}
+                      used={usages[item.healthKey] || 0}
                       onUse={() =>
                         handleGridHealthUse(
-                          item.iconKey,
+                          item.healthKey,
                           DEFAULT_HEALTH_ITEMS.find(
-                            (h) => h.iconKey === item.iconKey
+                            (h) => h.iconKey === item.healthKey
                           )?.limit || 1
                         )
                       }
-                      onReset={() => handleGridHealthReset(item.iconKey)}
-                      icon={HEALTH_ICON_MAP[item.iconKey]}
+                      onReset={() => handleGridHealthReset(item.healthKey)}
+                      icon={HEALTH_ICON_MAP[item.healthKey]}
                       activeColor="#D55C2D"
                       size={60}
                     />
                   ) : (
-                    getIconById(item.icon)
+                    getIconById(item.edcItemId)
                   )
                 ) : null}
               </Box>

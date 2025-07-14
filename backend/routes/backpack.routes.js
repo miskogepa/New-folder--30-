@@ -17,4 +17,8 @@ router.get("/:id", auth, asyncHandler(getBackpackById));
 router.put("/:id", auth, asyncHandler(updateBackpack));
 router.delete("/:id", auth, asyncHandler(deleteBackpack));
 
+// GET /api/backpacks?date=YYYY-MM-DD sada vraća jedan Backpack za taj dan (ili null)
+// POST /api/backpacks kreira ili ažurira grid za dan
+// PUT /api/backpacks/:id ažurira grid
+
 export default router;

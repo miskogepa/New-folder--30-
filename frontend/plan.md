@@ -564,3 +564,61 @@ Ova tema koristi tamnije, "military" i prirodne tonove sa akcentom na crvenkastu
 - Ova funkcionalnost će biti implementirana u posebnoj sekciji kasnije.
 
 ---
+
+## Plan za trajno čuvanje sadržaja ranca (Backpack grid) po danu
+
+### Cilj
+
+- Da sadržaj ranca (raspored predmeta u gridu) bude sačuvan u bazi za svaki dan i da se automatski učita pri refresh-u stranice.
+- Da se zadrže sve postojeće funkcionalnosti: drag & drop, modal za izbor predmeta, health ikonice povezane sa health logom u bazi.
+
+### 1. Backend proširenje
+
+- Model Backpack već ima polje `items` (lista referenci na EdcItem).
+- Proširi model tako da `items` može da sadrži i informaciju o poziciji u gridu (npr. `{ edcItemId, position }`), ili uvedi novo polje `grid` koje je niz od 18 elemenata (za 3x6 grid), gde je svaki element ili null ili sadrži podatke o predmetu.
+- Dodaj/izmeni rute:
+  - **GET /api/backpacks?date=YYYY-MM-DD** – vraća sadržaj ranca za taj dan (uključujući grid).
+  - **POST /api/backpacks** – kreira ili ažurira grid za taj dan.
+  - **PUT /api/backpacks/:id** – ažurira grid (npr. kad korisnik doda/ukloni/premesti predmet).
+
+### 2. Frontend logika
+
+- Na mount-u Backpack stranice:
+  - Fetch-uj grid za trenutni dan sa backend-a.
+  - Ako postoji, postavi ga u lokalni state/Zustand store.
+  - Ako ne postoji, inicijalizuj prazan grid.
+- Na svaku izmenu grida (dodavanje, uklanjanje, drag & drop, izbor varijante):
+  - Ažuriraj lokalni state.
+  - Sinhronizuj promenu sa backend-om (pozovi POST/PUT na /api/backpacks).
+- Pri refresh-u:
+  - Grid se automatski učitava iz baze i prikazuje korisniku.
+
+### 3. Health ikonice u gridu
+
+- Kada korisnik doda health ikonicu u grid, u grid se upisuje specijalni tip (npr. `{ type: 'health', key: 'water' }`).
+- Stanje korišćenja health ikonica i dalje dolazi iz health loga (kao i do sada).
+- Prikaz i ažuriranje health ikonica u gridu ostaje povezan sa health logom (sinhronizacija je već rešena).
+
+### 4. Modal za izbor predmeta
+
+- Kada korisnik doda EDC ikonicu koja ima više varijanti, modal se otvara kao i do sada.
+- Nakon izbora varijante, grid se ažurira i backend se sinhronizuje.
+
+### 5. Ne dirati:
+
+- Health log i health store (već rade ispravno).
+- Drag & drop i modal logiku (samo dodati backend sync nakon svake promene grida).
+
+### 6. Koraci implementacije
+
+1. Proširi backend model i rute za grid.
+2. Na frontend-u, učitaj grid iz baze na mount-u Backpack stranice.
+3. Na svaku promenu grida, sinhronizuj sa backend-om.
+4. Testiraj:
+   - Dodavanje/uklanjanje predmeta.
+   - Drag & drop.
+   - Modal za izbor varijante.
+   - Dodavanje health ikonica.
+   - Refresh stranice (grid ostaje isti).
+
+---

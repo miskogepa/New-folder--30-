@@ -93,6 +93,13 @@ export const backpacksAPI = {
     });
   },
 
+  // Dohvati ranac za određeni dan
+  getBackpacksByDate: async (date, token) => {
+    return apiCall(`/backpacks?date=${date}`, {
+      headers: getAuthHeaders(token),
+    });
+  },
+
   // Kreiraj novi ranac
   createBackpack: async (backpackData, token) => {
     return apiCall("/backpacks", {
