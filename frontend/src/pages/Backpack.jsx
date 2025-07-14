@@ -18,7 +18,12 @@ import {
 } from "react-icons/fa6";
 import { GiBackpack } from "react-icons/gi";
 import EdcItemSelectModal from "../components/EdcItemSelectModal";
-import { backpacksAPI, itemUsageAPI, healthAPI } from "../services/api";
+import {
+  backpacksAPI,
+  itemUsageAPI,
+  healthAPI,
+  edcItemsAPI,
+} from "../services/api";
 import { useUserStore } from "../store/userStore";
 import UsageCircleIcon from "../components/UsageCircleIcon";
 import { useHealthStore } from "../store/healthStore";
@@ -33,20 +38,6 @@ const HEALTH_ICON_MAP = {
 const GRID_ROWS = 6;
 const GRID_COLS = 3;
 const GRID_SIZE = GRID_ROWS * GRID_COLS;
-
-function getIconById(id) {
-  const found = EDC_ICONS.find((ic) => ic.id === id);
-  return found ? found.icon : null;
-}
-
-// Helper funkcija za današnji datum
-function getTodayDateString() {
-  const today = new Date();
-  const year = today.getFullYear();
-  const month = String(today.getMonth() + 1).padStart(2, "0");
-  const day = String(today.getDate()).padStart(2, "0");
-  return `${year}-${month}-${day}`;
-}
 
 export default function Backpack() {
   const { colorMode } = useColorMode();
@@ -63,6 +54,35 @@ export default function Backpack() {
   const [modalEdcType, setModalEdcType] = useState(null);
   // Ukloni nepotrebni lokalni state gridHealthUsages.
   const [currentDate, setCurrentDate] = useState(getTodayDateString());
+  const [edcItems, setEdcItems] = useState([]);
+
+  // Premesti getIconById ovde, unutar komponente
+  function getIconById(id) {
+    const edcItem = edcItems.find((item) => item._id === id);
+    let iconId = id;
+    if (edcItem) {
+      iconId = edcItem.icon || edcItem.type;
+    }
+    const found = EDC_ICONS.find((ic) => ic.id === iconId);
+    console.log(
+      "getIconById called with id:",
+      id,
+      "iconId:",
+      iconId,
+      "found:",
+      found
+    );
+    return found ? found.icon : null;
+  }
+
+  // Helper funkcija za današnji datum
+  function getTodayDateString() {
+    const today = new Date();
+    const year = today.getFullYear();
+    const month = String(today.getMonth() + 1).padStart(2, "0");
+    const day = String(today.getDate()).padStart(2, "0");
+    return `${year}-${month}-${day}`;
+  }
 
   // Fetch grid i health items na mount-u
   useEffect(() => {
@@ -85,6 +105,20 @@ export default function Backpack() {
     }
     fetchGridAndHealthItems();
   }, [token, loadHealthItems]);
+
+  // Fetch EDC predmete korisnika na mount-u
+  useEffect(() => {
+    async function fetchEdcItems() {
+      if (!token) return;
+      try {
+        const items = await edcItemsAPI.getItems(token);
+        setEdcItems(items);
+      } catch (err) {
+        setEdcItems([]);
+      }
+    }
+    fetchEdcItems();
+  }, [token]);
 
   // Dodajem useEffect za učitavanje health loga na mount-u i promenu datuma/tokena
   useEffect(() => {
@@ -119,10 +153,12 @@ export default function Backpack() {
       } else if (item.id) {
         gridItem = { type: "edc", edcItemId: item.id };
       }
-      const newGrid = [...gridItems];
-      newGrid[firstEmpty] = gridItem;
-      setGridItems(newGrid);
-      syncGrid(newGrid);
+      if (gridItem) {
+        const newGrid = [...gridItems];
+        newGrid[firstEmpty] = gridItem;
+        setGridItems(newGrid);
+        syncGrid(newGrid);
+      }
     }
   };
 
@@ -190,8 +226,12 @@ export default function Backpack() {
   // Kada korisnik izabere varijantu iz modala
   const handleSelectEdcVariant = async (selectedItem) => {
     if (modalGridIdx === null) return;
+    console.log("handleSelectEdcVariant selectedItem:", selectedItem);
     const newGrid = [...gridItems];
-    newGrid[modalGridIdx] = { type: "edc", edcItemId: selectedItem._id };
+    const edcItemId = selectedItem._id || selectedItem.id;
+    console.log("handleSelectEdcVariant edcItemId:", edcItemId);
+    newGrid[modalGridIdx] = { type: "edc", edcItemId };
+    console.log("handleSelectEdcVariant newGrid:", newGrid);
     setGridItems(newGrid);
     setModalOpen(false);
     setModalGridIdx(null);
