@@ -43,6 +43,54 @@ export default function Backpack() {
     }
   };
 
+  // Handler za prevlačenje (drag & drop)
+  const handleDragStart = (e, item) => {
+    // Za health ikonice šalji type: 'health', iconKey; za EDC šalji type: 'edc', id
+    if (item.iconKey) {
+      e.dataTransfer.setData(
+        "application/json",
+        JSON.stringify({ type: "health", iconKey: item.iconKey, key: item.key })
+      );
+    } else if (item.id) {
+      e.dataTransfer.setData(
+        "application/json",
+        JSON.stringify({ type: "edc", id: item.id })
+      );
+    }
+  };
+
+  const handleDrop = (e, idx) => {
+    e.preventDefault();
+    const data = e.dataTransfer.getData("application/json");
+    if (!data) return;
+    const dropData = JSON.parse(data);
+    let item = null;
+    if (dropData.type === "health") {
+      // Pronađi health item po iconKey
+      const found = DEFAULT_HEALTH_ITEMS.find(
+        (h) => h.iconKey === dropData.iconKey
+      );
+      if (found) {
+        item = { ...found };
+      }
+    } else if (dropData.type === "edc") {
+      // Pronađi EDC item po id
+      const found = EDC_ICONS.find((e) => e.id === dropData.id);
+      if (found) {
+        item = { ...found };
+      }
+    }
+    if (item) {
+      const newGrid = [...gridItems];
+      newGrid[idx] = item;
+      setGridItems(newGrid);
+    }
+  };
+
+  const handleDragOver = (e) => {
+    e.preventDefault();
+  };
+
   return (
     <Flex direction="row" w="100vw" h="100vh" overflow="hidden">
       {/* Leva strana: GRID */}
@@ -76,7 +124,7 @@ export default function Backpack() {
                 width: "90%",
                 height: "90%",
                 color: "#D5CCAB",
-                opacity: 0.20,
+                opacity: 0.2,
               }}
             />
           </Box>
@@ -106,8 +154,15 @@ export default function Backpack() {
                 position="relative"
                 border="1.5px solid #505143"
                 zIndex={4}
+                onDrop={(e) => handleDrop(e, idx)}
+                onDragOver={handleDragOver}
               >
-                {item ? item.icon : null}
+                {/* Renderuj ikonicu na osnovu tipa */}
+                {item
+                  ? item.iconKey
+                    ? HEALTH_ICON_MAP[item.iconKey] // Health ikonica
+                    : item.icon // EDC ikonica
+                  : null}
               </Box>
             ))}
           </Grid>
@@ -134,9 +189,9 @@ export default function Backpack() {
             icon={HEALTH_ICON_MAP[item.iconKey]}
             size="lg"
             variant="ghost"
-            onClick={() =>
-              handleAddToGrid({ ...item, icon: HEALTH_ICON_MAP[item.iconKey] })
-            }
+            onClick={() => handleAddToGrid({ ...item })}
+            draggable={true}
+            onDragStart={(e) => handleDragStart(e, { ...item })}
           />
         ))}
         {/* Zatim EDC ikonice (bez labela) */}
@@ -148,6 +203,8 @@ export default function Backpack() {
             size="lg"
             variant="ghost"
             onClick={() => handleAddToGrid(item)}
+            draggable={true}
+            onDragStart={(e) => handleDragStart(e, item)}
           />
         ))}
       </VStack>
